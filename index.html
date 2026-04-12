@@ -782,7 +782,7 @@
     return playEnglish(`Round ${name}`);
   }
   function playRestAnnouncement() {
-    return playEnglish("Rest");
+    return playEnglish("Interval");
   }
 
   // ============================================================
@@ -886,7 +886,7 @@
 
   function updateRoundLabel(){
     const lbl=document.getElementById("roundLabel");
-    if(isResting){lbl.textContent=`ROUND ${currentRound} END  ／  REST`;lbl.className="round-label rest";}
+    if(isResting){lbl.textContent=`ROUND ${currentRound} END  ／  INTERVAL`;lbl.className="round-label rest";}
     else{lbl.textContent=`ROUND ${currentRound} / ${getRounds()}`;lbl.className="round-label";}
   }
 
@@ -921,9 +921,14 @@
       await playBell(); vibrate([300]);
       callTimeout=setTimeout(scheduleGongOnly, gongIntervalSec*1000);
     } else {
-      document.getElementById("currentCall").textContent="スタート！";
+      const isFinal = currentRound === getRounds();
+      document.getElementById("currentCall").textContent= isFinal ? "FINAL ROUND!" : "スタート！";
       document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
-      await playRoundAnnouncement(currentRound);
+      if(isFinal){
+        await playEnglish("Final Round");
+      } else {
+        await playRoundAnnouncement(currentRound);
+      }
       await playBell(); vibrate([300]);
       callTimeout=setTimeout(scheduleNextCall,600);
     }
@@ -954,8 +959,8 @@
         currentRound++; await startRound();
       } else {
         isResting=true; timeLeft=restSec; updateRoundLabel();
-        document.getElementById("currentCall").textContent="💤 Rest";
-        document.getElementById("status").textContent="休憩中... 次のラウンドまで待機";
+        document.getElementById("currentCall").textContent="💤 Interval";
+        document.getElementById("status").textContent="インターバル中... 次のラウンドまで待機";
         await playRestAnnouncement();
         timerInterval=setInterval(()=>{
           timeLeft--;
