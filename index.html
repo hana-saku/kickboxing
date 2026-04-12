@@ -89,6 +89,10 @@
     /* カスタムボタン未設定時 */
     .mode-btn.custom-empty { opacity: 0.45; border-style: dashed; }
     .mode-btn.custom-empty:hover { opacity: 0.7; }
+    /* ランダム選択チェック */
+    .rand-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 6px; font-size: 0.68rem; color: #777; cursor: pointer; user-select: none; }
+    .rand-toggle input { accent-color: #e94560; width: 14px; height: 14px; cursor: pointer; }
+    .rand-toggle.checked { color: #e94560; }
 
     /* 速度コントロール */
     .speed-section { margin-bottom: 16px; }
@@ -181,21 +185,36 @@
     <div class="modes" id="baseModes">
       <button class="mode-btn active" data-mode="wantwo" onclick="selectMode(this)">
         ワンツー<br><small>2分間</small><br><span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
+        <label class="rand-toggle checked" id="randLabel-wantwo" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-wantwo" checked onchange="toggleRandom('wantwo',this.checked)">ランダムに含める
+        </label>
       </button>
       <button class="mode-btn" data-mode="combo" onclick="selectMode(this)">
         ワンツー<br>フック<br>ストレート<br><small>2分間</small><br><span class="rec-mark" id="mark-combo">⚪ 未録音</span>
+        <label class="rand-toggle checked" id="randLabel-combo" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-combo" checked onchange="toggleRandom('combo',this.checked)">ランダムに含める
+        </label>
       </button>
       <button class="mode-btn" data-mode="middle" onclick="selectMode(this)">
         右・左<br>ミドル<br><small>2分間</small><br><span class="rec-mark" id="mark-middle">⚪ 未録音</span>
+        <label class="rand-toggle checked" id="randLabel-middle" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-middle" checked onchange="toggleRandom('middle',this.checked)">ランダムに含める
+        </label>
       </button>
       <button class="mode-btn" data-mode="maegeri" onclick="selectMode(this)">
         前蹴り<br><small>2分間</small><br><span class="rec-mark" id="mark-maegeri">⚪ 未録音</span>
+        <label class="rand-toggle checked" id="randLabel-maegeri" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-maegeri" checked onchange="toggleRandom('maegeri',this.checked)">ランダムに含める
+        </label>
       </button>
       <button class="mode-btn" data-mode="upper" onclick="selectMode(this)">
         アッパー<br><small>2分間</small><br><span class="rec-mark" id="mark-upper">⚪ 未録音</span>
+        <label class="rand-toggle checked" id="randLabel-upper" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
+        </label>
       </button>
       <button class="mode-btn" data-mode="random" onclick="selectMode(this)">
-        全部<br>ランダム<br><small>2分間</small><br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
+        ✅ 選択した<br>項目を<br>ランダム<br><small>2分間</small><br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
       </button>
     </div>
 
@@ -444,7 +463,10 @@
       btn.id = `modeBtn-${def.id}`;
       btn.innerHTML = `<span id="modeName-${def.id}">${def.label}</span><br>
         <small>2分間</small><br>
-        <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>`;
+        <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>
+        <label class="rand-toggle" id="randLabel-${def.id}" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">ランダムに含める
+        </label>`;
       container.appendChild(btn);
     });
   }
@@ -689,6 +711,47 @@
   let running       = false;
   let shuffleQueue  = [];
 
+  // ============================================================
+  //  ランダム選択
+  // ============================================================
+  const LS_RAND_PREFIX = "kick_rand_";
+
+  // デフォルトは基本モード全部ON
+  const BASE_MODES_FOR_RAND = ["wantwo","combo","middle","maegeri","upper"];
+  const randEnabled = {}; // mode/id -> bool
+
+  function toggleRandom(key, checked) {
+    randEnabled[key] = checked;
+    localStorage.setItem(LS_RAND_PREFIX + key, checked ? "1" : "0");
+    const label = document.getElementById(`randLabel-${key}`);
+    if (label) label.classList.toggle("checked", checked);
+  }
+
+  function loadRandSettings() {
+    // 基本モード
+    BASE_MODES_FOR_RAND.forEach(key => {
+      const saved = localStorage.getItem(LS_RAND_PREFIX + key);
+      const val   = saved === null ? true : saved === "1";
+      randEnabled[key] = val;
+      const cb    = document.getElementById(`rand-${key}`);
+      const label = document.getElementById(`randLabel-${key}`);
+      if (cb)    cb.checked = val;
+      if (label) label.classList.toggle("checked", val);
+    });
+    // カスタム
+    CUSTOM_IDS.forEach(key => {
+      const saved = localStorage.getItem(LS_RAND_PREFIX + key);
+      const val   = saved === "1";
+      randEnabled[key] = val;
+      const cb    = document.getElementById(`rand-${key}`);
+      const label = document.getElementById(`randLabel-${key}`);
+      if (cb)    cb.checked = val;
+      if (label) label.classList.toggle("checked", val);
+    });
+  }
+  // DOMContentLoaded後に読み込む
+  window.addEventListener('DOMContentLoaded', loadRandSettings);
+
   // 時間設定（localStorageから復元）
   let trainingMinutes = parseInt(localStorage.getItem('kick_duration') || '2', 10);
   function getDuration() { return trainingMinutes * 60; }
@@ -710,10 +773,18 @@
     // カスタムモードの場合はそのIDのみ
     if (CUSTOM_IDS.includes(mode)) return [mode];
     if (mode === "random") {
-      // 基本コール＋録音済みカスタムコールを全部ランダムに
-      const base    = ["wantwo","wantwo","combo","migi","hidari","maegeri","upper"];
-      const customs = CUSTOM_IDS.filter(id => recBlobUrls[id]);
-      return [...base, ...customs];
+      let list = [];
+      // 基本モード：チェックONのものを追加
+      if (randEnabled["wantwo"]  !== false) list.push("wantwo", "wantwo");
+      if (randEnabled["combo"]   !== false) list.push("combo");
+      if (randEnabled["middle"]  !== false) list.push("migi", "hidari");
+      if (randEnabled["maegeri"] !== false) list.push("maegeri");
+      if (randEnabled["upper"]   !== false) list.push("upper");
+      // カスタム：チェックON＆録音済みのものを追加
+      CUSTOM_IDS.forEach(id => {
+        if (randEnabled[id] && recBlobUrls[id]) list.push(id);
+      });
+      return list.length > 0 ? list : ["wantwo"]; // 何もなければデフォルト
     }
     return MODES[mode] || [mode];
   }
