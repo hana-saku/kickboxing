@@ -183,7 +183,10 @@
 
     <p class="mode-section-title">基本モード</p>
     <div class="modes" id="baseModes">
-      <button class="mode-btn active" data-mode="wantwo" onclick="selectMode(this)">
+      <button class="mode-btn active" data-mode="random" onclick="selectMode(this)">
+        ✅ 選択した<br>項目を<br>ランダム<br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="wantwo" onclick="selectMode(this)">
         ワンツー<br><span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-wantwo" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-wantwo" checked onchange="toggleRandom('wantwo',this.checked)">ランダムに含める
@@ -212,9 +215,6 @@
         <label class="rand-toggle checked" id="randLabel-upper" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
         </label>
-      </button>
-      <button class="mode-btn" data-mode="random" onclick="selectMode(this)">
-        ✅ 選択した<br>項目を<br>ランダム<br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
       </button>
     </div>
 
@@ -703,7 +703,7 @@
   // ============================================================
   //  トレーニング
   // ============================================================
-  let selectedMode  = "wantwo";
+  let selectedMode  = "random";
   let timerInterval = null;
   let callTimeout   = null;
   let timeLeft      = 0;
