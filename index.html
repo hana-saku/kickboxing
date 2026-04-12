@@ -767,16 +767,22 @@
     "Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen",
     "Sixteen","Seventeen","Eighteen","Nineteen","Twenty"];
 
-  function playRoundAnnouncement(roundNum) {
+  function playEnglish(text) {
     return new Promise(resolve => {
-      const name = ROUND_NAMES[roundNum - 1] || String(roundNum);
-      const u = new SpeechSynthesisUtterance(`Round ${name}`);
+      const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-US"; u.rate = 0.88; u.pitch = 1.0; u.volume = 1.0;
       const enVoice = voices.find(v=>v.lang==="en-US") || voices.find(v=>v.lang.startsWith("en"));
       if (enVoice) u.voice = enVoice;
       u.onend = ()=>resolve(); u.onerror = ()=>resolve();
       synth.cancel(); synth.speak(u);
     });
+  }
+  function playRoundAnnouncement(roundNum) {
+    const name = ROUND_NAMES[roundNum - 1] || String(roundNum);
+    return playEnglish(`Round ${name}`);
+  }
+  function playRestAnnouncement() {
+    return playEnglish("Rest");
   }
 
   // ============================================================
@@ -880,7 +886,7 @@
 
   function updateRoundLabel(){
     const lbl=document.getElementById("roundLabel");
-    if(isResting){lbl.textContent=`ROUND ${currentRound} 終了 ／ 休憩中`;lbl.className="round-label rest";}
+    if(isResting){lbl.textContent=`ROUND ${currentRound} END  ／  REST`;lbl.className="round-label rest";}
     else{lbl.textContent=`ROUND ${currentRound} / ${getRounds()}`;lbl.className="round-label";}
   }
 
@@ -948,9 +954,9 @@
         currentRound++; await startRound();
       } else {
         isResting=true; timeLeft=restSec; updateRoundLabel();
-        document.getElementById("currentCall").textContent="💤 休憩";
-        document.getElementById("status").textContent="休憩中...次のラウンドまで待機";
-        await playTTS(["休憩"]);
+        document.getElementById("currentCall").textContent="💤 Rest";
+        document.getElementById("status").textContent="休憩中... 次のラウンドまで待機";
+        await playRestAnnouncement();
         timerInterval=setInterval(()=>{
           timeLeft--;
           document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
