@@ -792,14 +792,29 @@
     u.lang="ja-JP"; u.rate=1.1*speechRate; u.pitch=1.2; u.volume=1.0;
     const v=getJpVoice(); if(v) u.voice=v; return u;
   }
+  let currentCallAudio = null; // 再生中の録音音声
+
+  function stopCurrentCall(){
+    if(currentCallAudio){
+      currentCallAudio.pause();
+      currentCallAudio.currentTime=0;
+      currentCallAudio=null;
+    }
+    synth.cancel();
+  }
+
   function playCallId(id){
     return new Promise(resolve=>{
       if(recBlobUrls[id]){
         const a=new Audio(recBlobUrls[id]);
+        currentCallAudio=a;
         a.playbackRate=speechRate; a.preservesPitch=true;
         a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
-        a.onended=()=>resolve(); a.onerror=()=>resolve(); a.play();
+        a.onended=()=>{currentCallAudio=null;resolve();};
+        a.onerror=()=>{currentCallAudio=null;resolve();};
+        a.play();
       }else{
+        currentCallAudio=null;
         const def=CALL_DEFS.find(d=>d.id===id);
         const words=def?def.ttsWords:[id];
         synth.cancel();
@@ -1029,7 +1044,7 @@
 
   async function onRoundEnd(){
     isResting=true; // 並行中のscheduleNextCallをすぐ止める
-    clearTimeout(callTimeout); synth.cancel();
+    clearTimeout(callTimeout); stopCurrentCall(); // 再生中の声を即カット
     if(!running) return;
     saveRound(); // 履歴に記録
     await playEndBell(); vibrate([400]);
@@ -1093,7 +1108,7 @@
   function stopTraining(){
     if(!running) return;
     running=false; isResting=false;
-    clearInterval(timerInterval); clearTimeout(callTimeout); synth.cancel();
+    clearInterval(timerInterval); clearTimeout(callTimeout); stopCurrentCall();
     document.getElementById("startBtn").disabled=false;
     document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="auto");
     document.getElementById("roundLabel").textContent="";
