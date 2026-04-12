@@ -1,4 +1,4 @@
-const CACHE = 'kickboxing-v7';
+const CACHE = 'kickboxing-v8';
 // gong-end.mp3はキャッシュしない（常にネットワーク取得）
 const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg', './gong.mp3'];
 
