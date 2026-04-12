@@ -13,230 +13,237 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #1a1a2e;
-      color: #fff;
+      background: #1a1a2e; color: #fff;
       font-family: 'Helvetica Neue', Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 24px 16px 80px;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh; padding: 20px 16px 80px;
     }
-    h1 { font-size: 1.5rem; margin-bottom: 6px; color: #e94560; letter-spacing: 2px; }
+    h1 { font-size: 1.4rem; color: #e94560; letter-spacing: 2px; margin-bottom: 4px; }
 
     /* タブ */
-    .tabs { display: flex; margin: 14px 0 20px; border-radius: 10px; overflow: hidden; border: 2px solid #0f3460; }
-    .tab { padding: 10px 28px; background: #16213e; color: #aaa; font-size: 0.95rem; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+    .tabs { display: flex; margin: 12px 0 18px; border-radius: 10px; overflow: hidden; border: 2px solid #0f3460; }
+    .tab { flex: 1; padding: 10px 0; background: #16213e; color: #aaa; font-size: 0.88rem; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
     .tab.active { background: #e94560; color: #fff; }
 
-    /* 録音セクション */
-    #recSection { width: 100%; max-width: 500px; }
-    .rec-title { font-size: 0.9rem; color: #aaa; margin-bottom: 16px; text-align: center; line-height: 1.7; }
-    .rec-section-title { font-size: 0.85rem; color: #e94560; font-weight: bold; margin: 18px 0 10px; letter-spacing: 1px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
-    .rec-list { display: flex; flex-direction: column; gap: 12px; }
-    .rec-row {
-      background: #16213e; border: 2px solid #0f3460;
-      border-radius: 12px; padding: 14px 16px;
-    }
-    .rec-row.done { border-color: #2ecc71; }
-    .rec-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .rec-label { flex: 1; font-size: 1.05rem; font-weight: bold; color: #f0c040; }
-    /* カスタム用ラベル入力 */
-    .rec-label-input {
-      flex: 1; background: #0d1b2a; border: 1px solid #0f3460; border-radius: 6px;
-      color: #f0c040; font-size: 1rem; font-weight: bold; padding: 4px 8px;
-      outline: none;
-    }
-    .rec-label-input:focus { border-color: #e94560; }
-    .rec-label-input::placeholder { color: #444; font-weight: normal; }
-    .rec-status { font-size: 0.78rem; color: #2ecc71; display: none; }
-    .rec-row.done .rec-status { display: inline; }
-    /* 間隔コントロール */
-    .delay-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.82rem; color: #aaa; }
-    .delay-row span { white-space: nowrap; }
-    .delay-val { color: #f0c040; font-weight: bold; min-width: 28px; text-align: center; display: inline-block; }
-    .delay-btn { background: #0f3460; border: none; color: #7ec8e3; width: 28px; height: 28px; border-radius: 6px; font-size: 1rem; cursor: pointer; line-height: 1; }
-    .delay-btn:hover { background: #1a5276; }
-    .rec-btns { display: flex; gap: 8px; }
-    .rec-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-    .rec-btn.record { background: #e94560; color: #fff; }
-    .rec-btn.record:hover { background: #c73652; }
-    .rec-btn.record.recording { background: #ff0040; animation: pulse 0.6s infinite alternate; }
-    .rec-btn.play { background: #0f3460; color: #7ec8e3; }
-    .rec-btn.play:hover { background: #1a5276; }
-    .rec-btn.play:disabled { opacity: 0.3; cursor: default; }
-    .waveform { height: 36px; width: 100%; border-radius: 6px; overflow: hidden; background: #0d1b2a; display: flex; align-items: center; }
-    .wave-canvas { width: 100%; height: 36px; display: block; }
-    @keyframes pulse { from { opacity:1; } to { opacity:0.5; } }
+    /* ========== トレーニング ========== */
+    #trainSection { width: 100%; max-width: 480px; }
 
-    /* トレーニングセクション */
-    #trainSection { width: 100%; max-width: 500px; }
-    .timer-display { font-size: 4rem; font-weight: bold; color: #f5f5f5; text-align: center; margin: 10px 0; font-variant-numeric: tabular-nums; }
-    .current-call { font-size: 2rem; font-weight: bold; color: #f0c040; min-height: 3rem; margin-bottom: 12px; text-align: center; }
+    /* ラウンド＋タイマー */
+    .round-label { text-align: center; font-size: 0.9rem; color: #aaa; letter-spacing: 2px; margin-bottom: 2px; min-height: 1.2em; }
+    .round-label.rest { color: #3498db; }
+    .timer-display { font-size: 4.5rem; font-weight: bold; color: #f5f5f5; text-align: center; font-variant-numeric: tabular-nums; line-height: 1; }
+    .current-call { font-size: 2rem; font-weight: bold; color: #f0c040; min-height: 2.6rem; text-align: center; margin: 8px 0 14px; }
 
     /* モードボタン */
-    .mode-section-title { font-size: 0.8rem; color: #aaa; margin: 0 0 8px; letter-spacing: 1px; }
-    .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .section-title { font-size: 0.78rem; color: #666; letter-spacing: 1px; margin: 0 0 8px; }
+    .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
     .mode-btn {
       background: #16213e; border: 2px solid #0f3460; color: #ccc;
-      padding: 14px 6px; border-radius: 12px; font-size: 0.82rem;
-      cursor: pointer; transition: all 0.2s; line-height: 1.6; text-align: center;
+      padding: 12px 4px; border-radius: 12px; font-size: 0.8rem;
+      cursor: pointer; transition: all 0.2s; line-height: 1.5; text-align: center;
     }
     .mode-btn:hover { border-color: #e94560; color: #fff; }
     .mode-btn.active { border-color: #e94560; background: #e94560; color: #fff; }
-    .mode-btn .rec-mark { font-size: 0.68rem; display: inline-block; margin-top: 4px; color: #555; }
+    .mode-btn .rec-mark { font-size: 0.65rem; display: block; margin-top: 3px; color: #555; }
     .mode-btn.has-rec .rec-mark { color: #2ecc71; }
-    /* カスタムボタン未設定時 */
-    .mode-btn.custom-empty { opacity: 0.45; border-style: dashed; }
-    .mode-btn.custom-empty:hover { opacity: 0.7; }
-    /* ランダム選択チェック */
-    .rand-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 6px; font-size: 0.68rem; color: #777; cursor: pointer; user-select: none; }
-    .rand-toggle input { accent-color: #e94560; width: 14px; height: 14px; cursor: pointer; }
+    .mode-btn.custom-empty { opacity: 0.4; border-style: dashed; }
+    .rand-toggle { display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 5px; font-size: 0.65rem; color: #666; cursor: pointer; user-select: none; }
+    .rand-toggle input { accent-color: #e94560; width: 13px; height: 13px; cursor: pointer; }
     .rand-toggle.checked { color: #e94560; }
 
-    /* 速度コントロール */
-    .speed-section { margin-bottom: 16px; }
-    .speed-label-row { text-align: center; font-size: 0.9rem; color: #aaa; margin-bottom: 8px; }
-    #rateLabel { color: #f0c040; font-weight: bold; margin-left: 4px; }
-    .speed-btns { display: flex; gap: 8px; justify-content: center; }
+    /* 設定ボックス */
+    .settings-box { background: #16213e; border: 1px solid #0f3460; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .setting-item { text-align: center; }
+    .setting-item label { font-size: 0.75rem; color: #aaa; display: block; margin-bottom: 4px; }
+    .setting-input {
+      width: 100%; background: #0d1b2a; border: 2px solid #0f3460;
+      border-radius: 8px; color: #f0c040; font-size: 1.2rem; font-weight: bold;
+      text-align: center; padding: 6px 2px; outline: none;
+    }
+    .setting-input:focus { border-color: #e94560; }
+    .setting-unit { font-size: 0.72rem; color: #555; margin-top: 2px; }
+    /* 速さ */
+    .speed-row { display: flex; gap: 6px; }
     .spd-btn {
-      padding: 8px 18px; border-radius: 8px; border: 2px solid #0f3460;
-      background: #16213e; color: #ccc; font-size: 0.9rem; font-weight: bold;
+      flex: 1; padding: 8px 0; border-radius: 8px; border: 2px solid #0f3460;
+      background: #0d1b2a; color: #aaa; font-size: 0.78rem; font-weight: bold;
       cursor: pointer; transition: all 0.2s;
     }
-    .spd-btn:hover { border-color: #e94560; color: #fff; background: #e94560; }
-    .spd-btn.fast-active { border-color: #f0c040; color: #f0c040; }
+    .spd-btn.active { border-color: #f0c040; color: #f0c040; background: #0d1b2a; }
 
-    /* 時間設定 */
-    .duration-section { margin-bottom: 16px; text-align: center; }
-    .duration-label-row { font-size: 0.9rem; color: #aaa; margin-bottom: 8px; }
-    .duration-input-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .duration-input {
-      width: 64px; background: #0d1b2a; border: 2px solid #0f3460;
-      border-radius: 8px; color: #f0c040; font-size: 1.3rem; font-weight: bold;
-      text-align: center; padding: 6px 4px; outline: none;
-    }
-    .duration-input:focus { border-color: #e94560; }
-    .duration-unit { font-size: 1rem; color: #aaa; }
-
-    .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; }
-    .ctrl-btn { padding: 14px 34px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    /* スタート/ストップ */
+    .controls { display: flex; gap: 14px; justify-content: center; margin-bottom: 10px; }
+    .ctrl-btn { padding: 14px 36px; border-radius: 12px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
     #startBtn { background: #e94560; color: #fff; }
     #startBtn:hover { background: #c73652; }
-    #startBtn:disabled { opacity: 0.5; cursor: default; }
-    #stopBtn { background: #333; color: #aaa; }
-    #stopBtn:hover { background: #555; color: #fff; }
-    .voice-badge { text-align: center; font-size: 0.82rem; color: #555; margin-bottom: 6px; }
+    #startBtn:disabled { opacity: 0.45; cursor: default; }
+    #stopBtn { background: #2c2c44; color: #aaa; }
+    #stopBtn:hover { background: #3a3a55; color: #fff; }
+    .status { font-size: 0.82rem; color: #555; text-align: center; }
+    .voice-badge { text-align: center; font-size: 0.78rem; color: #555; margin-bottom: 12px; }
     .voice-badge span { color: #2ecc71; }
-    .status { font-size: 0.85rem; color: #666; text-align: center; }
+
+    /* ========== 録音 ========== */
+    #recSection { width: 100%; max-width: 480px; }
+    .rec-title { font-size: 0.88rem; color: #aaa; margin-bottom: 14px; text-align: center; line-height: 1.7; }
+    .rec-section-title { font-size: 0.8rem; color: #e94560; font-weight: bold; margin: 16px 0 8px; border-bottom: 1px solid #0f3460; padding-bottom: 5px; letter-spacing: 1px; }
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+    .rec-row { background: #16213e; border: 2px solid #0f3460; border-radius: 12px; padding: 12px 14px; }
+    .rec-row.done { border-color: #2ecc71; }
+    .rec-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .rec-label { flex: 1; font-size: 1rem; font-weight: bold; color: #f0c040; }
+    .rec-label-input {
+      flex: 1; background: #0d1b2a; border: 1px solid #0f3460; border-radius: 6px;
+      color: #f0c040; font-size: 0.95rem; font-weight: bold; padding: 4px 8px; outline: none;
+    }
+    .rec-label-input:focus { border-color: #e94560; }
+    .rec-label-input::placeholder { color: #444; font-weight: normal; }
+    .rec-status { font-size: 0.75rem; color: #2ecc71; display: none; }
+    .rec-row.done .rec-status { display: inline; }
+    .rec-btns { display: flex; gap: 8px; margin-bottom: 8px; }
+    .rec-btn { padding: 8px 14px; border-radius: 8px; border: none; font-size: 0.82rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .rec-btn.record { background: #e94560; color: #fff; }
+    .rec-btn.record.recording { background: #ff0040; animation: pulse 0.6s infinite alternate; }
+    .rec-btn.play { background: #0f3460; color: #7ec8e3; }
+    .rec-btn.play:disabled { opacity: 0.3; cursor: default; }
+    .delay-row { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #aaa; }
+    .delay-val { color: #f0c040; font-weight: bold; min-width: 26px; text-align: center; }
+    .delay-btn { background: #0f3460; border: none; color: #7ec8e3; width: 26px; height: 26px; border-radius: 6px; font-size: 0.95rem; cursor: pointer; }
+    .waveform { height: 32px; width: 100%; border-radius: 6px; background: #0d1b2a; margin-top: 6px; display: none; }
+    .wave-canvas { width: 100%; height: 32px; display: block; }
+    @keyframes pulse { from{opacity:1} to{opacity:0.4} }
+
+    /* ========== 履歴 ========== */
+    #histSection { width: 100%; max-width: 480px; }
+    .hist-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .hist-stat-box { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 14px 8px; text-align: center; }
+    .hist-stat-num { font-size: 2rem; font-weight: bold; color: #f0c040; }
+    .hist-stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
+    .hist-list { display: flex; flex-direction: column; gap: 8px; }
+    .hist-item { background: #16213e; border: 1px solid #0f3460; border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .hist-date { font-size: 0.85rem; color: #aaa; }
+    .hist-rounds { font-size: 0.95rem; font-weight: bold; color: #2ecc71; }
+    .hist-empty { text-align: center; color: #555; font-size: 0.9rem; padding: 30px 0; }
+    .hist-clear { margin-top: 16px; text-align: center; }
+    .hist-clear-btn { background: none; border: 1px solid #333; color: #555; padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
+    .hist-clear-btn:hover { border-color: #e94560; color: #e94560; }
 
     /* インストールバナー */
     #installBanner {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: #0f3460; border-top: 2px solid #e94560;
-      padding: 14px 16px; display: flex; align-items: center;
-      gap: 12px; z-index: 100; animation: slideUp 0.3s ease;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px; z-index: 100;
     }
     #installBanner.hidden { display: none; }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .install-text { flex: 1; font-size: 0.85rem; color: #ccc; line-height: 1.4; }
-    .install-text strong { color: #fff; display: block; margin-bottom: 2px; }
-    #installBtn { background: #e94560; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    #dismissBtn { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
+    .install-text { flex: 1; font-size: 0.82rem; color: #ccc; line-height: 1.4; }
+    .install-text strong { color: #fff; display: block; }
+    #installBtn { background: #e94560; color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-size: 0.88rem; font-weight: bold; cursor: pointer; }
+    #dismissBtn { background: none; border: none; color: #555; font-size: 1.2rem; cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- インストールバナー -->
+
   <div id="installBanner" class="hidden">
     <div class="install-text">
       <strong>📲 アプリをインストール</strong>
       <span id="installMsg">ホーム画面に追加してオフラインでも使えます</span>
     </div>
     <button id="installBtn" onclick="doInstall()">追加</button>
-    <button id="dismissBtn" onclick="dismissBanner()" title="閉じる">✕</button>
+    <button id="dismissBtn" onclick="dismissBanner()">✕</button>
   </div>
 
   <h1>🥊 キックボクシング 声だし</h1>
 
   <div class="tabs">
-    <button class="tab active" onclick="showTab('train')">トレーニング</button>
-    <button class="tab"        onclick="showTab('rec')">🎙 録音</button>
+    <button class="tab active"  onclick="showTab('train')">トレーニング</button>
+    <button class="tab"         onclick="showTab('rec')">🎙 録音</button>
+    <button class="tab"         onclick="showTab('hist')">📊 履歴</button>
   </div>
 
-  <!-- 録音タブ -->
-  <div id="recSection" style="display:none">
-    <p class="rec-title">
-      各コールを<strong>1回だけ</strong>録音してください。<br>
-      録音した声がトレーニング中に自動リピートされます。
-    </p>
-    <div class="rec-section-title">▼ 基本コール</div>
-    <div class="rec-list" id="recListBase"></div>
-    <div class="rec-section-title" style="margin-top:20px">▼ カスタムコール（自由に名前をつけて録音）</div>
-    <div class="rec-list" id="recListCustom"></div>
-  </div>
-
-  <!-- トレーニングタブ -->
+  <!-- ===== トレーニングタブ ===== -->
   <div id="trainSection">
+
+    <div class="round-label" id="roundLabel">ROUND 1 / 3</div>
     <div class="timer-display" id="timerDisplay">2:00</div>
     <div class="current-call"  id="currentCall">－</div>
     <div class="voice-badge"   id="voiceBadge">声: AIの声</div>
 
-    <p class="mode-section-title">基本モード</p>
+    <!-- 基本モード -->
+    <p class="section-title">基本モード</p>
     <div class="modes" id="baseModes">
       <button class="mode-btn active" data-mode="random" onclick="selectMode(this)">
-        ✅ 選択した<br>項目を<br>ランダム<br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
+        ✅ 選択した<br>項目を<br>ランダム
+        <span class="rec-mark" id="mark-random"></span>
       </button>
       <button class="mode-btn" data-mode="wantwo" onclick="selectMode(this)">
-        ワンツー<br><span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
+        ワンツー
+        <span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-wantwo" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-wantwo" checked onchange="toggleRandom('wantwo',this.checked)">ランダムに含める
         </label>
       </button>
       <button class="mode-btn" data-mode="combo" onclick="selectMode(this)">
-        ワンツー<br>フック<br>ストレート<br><span class="rec-mark" id="mark-combo">⚪ 未録音</span>
+        ワンツー<br>フック<br>ストレート
+        <span class="rec-mark" id="mark-combo">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-combo" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-combo" checked onchange="toggleRandom('combo',this.checked)">ランダムに含める
         </label>
       </button>
       <button class="mode-btn" data-mode="middle" onclick="selectMode(this)">
-        右・左<br>ミドル<br><span class="rec-mark" id="mark-middle">⚪ 未録音</span>
+        右・左<br>ミドル
+        <span class="rec-mark" id="mark-middle">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-middle" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-middle" checked onchange="toggleRandom('middle',this.checked)">ランダムに含める
         </label>
       </button>
       <button class="mode-btn" data-mode="maegeri" onclick="selectMode(this)">
-        前蹴り<br><span class="rec-mark" id="mark-maegeri">⚪ 未録音</span>
+        前蹴り
+        <span class="rec-mark" id="mark-maegeri">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-maegeri" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-maegeri" checked onchange="toggleRandom('maegeri',this.checked)">ランダムに含める
         </label>
       </button>
       <button class="mode-btn" data-mode="upper" onclick="selectMode(this)">
-        アッパー<br><span class="rec-mark" id="mark-upper">⚪ 未録音</span>
+        アッパー
+        <span class="rec-mark" id="mark-upper">⚪ 未録音</span>
         <label class="rand-toggle checked" id="randLabel-upper" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
         </label>
       </button>
     </div>
 
-    <p class="mode-section-title" style="margin-top:6px">カスタムモード</p>
+    <!-- カスタムモード -->
+    <p class="section-title" style="margin-top:4px">カスタムモード</p>
     <div class="modes" id="customModes"></div>
 
-    <div class="speed-section">
-      <div class="speed-label-row">話す速さ：<span id="rateLabel">普通</span></div>
-      <div class="speed-btns">
-        <button class="spd-btn" id="rateBtn-slow"   onclick="setSpeechRate(0.75,'遅い')">🐢 遅い</button>
-        <button class="spd-btn fast-active" id="rateBtn-normal" onclick="setSpeechRate(1.0,'普通')">普通</button>
-        <button class="spd-btn" id="rateBtn-fast"   onclick="setSpeechRate(1.4,'速い')">🔥 速い</button>
-        <button class="spd-btn" id="rateBtn-vfast"  onclick="setSpeechRate(1.8,'激速')">⚡ 激速</button>
+    <!-- 設定ボックス -->
+    <div class="settings-box">
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label>ラウンド数</label>
+          <input class="setting-input" id="roundsInput" type="number" min="1" max="20" value="3"
+            oninput="onSettingChange()">
+          <div class="setting-unit">回</div>
+        </div>
+        <div class="setting-item">
+          <label>試合時間</label>
+          <input class="setting-input" id="workInput" type="number" min="1" max="99" value="2"
+            oninput="onSettingChange()">
+          <div class="setting-unit">分</div>
+        </div>
+        <div class="setting-item">
+          <label>休憩時間</label>
+          <input class="setting-input" id="restInput" type="number" min="0" max="99" value="1"
+            oninput="onSettingChange()">
+          <div class="setting-unit">分（0=なし）</div>
+        </div>
       </div>
-    </div>
-
-    <div class="duration-section">
-      <div class="duration-label-row">⏱ トレーニング時間</div>
-      <div class="duration-input-row">
-        <input class="duration-input" id="durationInput" type="number" min="1" max="99" value="2"
-          oninput="onDurationInput(this.value)">
-        <span class="duration-unit">分（1〜99分）</span>
+      <div class="speed-row">
+        <button class="spd-btn" id="spd-slow"   onclick="setSpeechRate(0.75,'🐢 遅い','slow')">🐢 遅い</button>
+        <button class="spd-btn active" id="spd-normal" onclick="setSpeechRate(1.0,'普通','normal')">普通</button>
+        <button class="spd-btn" id="spd-fast"   onclick="setSpeechRate(1.4,'🔥 速い','fast')">🔥 速い</button>
+        <button class="spd-btn" id="spd-vfast"  onclick="setSpeechRate(1.8,'⚡ 激速','vfast')">⚡ 激速</button>
       </div>
     </div>
 
@@ -247,667 +254,596 @@
     <div class="status" id="status">モードを選んでスタートを押してください</div>
   </div>
 
+  <!-- ===== 録音タブ ===== -->
+  <div id="recSection" style="display:none">
+    <p class="rec-title">各コールを<strong>1回だけ</strong>録音してください。<br>録音した声がトレーニング中に自動リピートされます。</p>
+    <div class="rec-section-title">▼ 基本コール</div>
+    <div class="rec-list" id="recListBase"></div>
+    <div class="rec-section-title" style="margin-top:16px">▼ カスタムコール（名前をつけて自由に録音）</div>
+    <div class="rec-list" id="recListCustom"></div>
+  </div>
+
+  <!-- ===== 履歴タブ ===== -->
+  <div id="histSection" style="display:none">
+    <div class="hist-stats">
+      <div class="hist-stat-box">
+        <div class="hist-stat-num" id="statToday">0</div>
+        <div class="hist-stat-label">今日<br>ラウンド</div>
+      </div>
+      <div class="hist-stat-box">
+        <div class="hist-stat-num" id="statWeek">0</div>
+        <div class="hist-stat-label">今週<br>ラウンド</div>
+      </div>
+      <div class="hist-stat-box">
+        <div class="hist-stat-num" id="statTotal">0</div>
+        <div class="hist-stat-label">合計<br>ラウンド</div>
+      </div>
+    </div>
+    <div class="hist-list" id="histList"></div>
+    <div class="hist-clear">
+      <button class="hist-clear-btn" onclick="clearHistory()">履歴をリセット</button>
+    </div>
+  </div>
+
   <script>
   // ============================================================
   //  コール定義
   // ============================================================
   const BASE_DEFS = [
-    { id: "wantwo",  label: "ワンツー！",                  display: "ワンツー！",                  ttsWords: ["ワン","ツー"] },
-    { id: "combo",   label: "ワンツー・フック・ストレート！",  display: "ワンツー フック ストレート！",   ttsWords: ["ワン","ツー","フック","ストレート"] },
-    { id: "migi",    label: "右ミドル！",                  display: "右ミドル！",                  ttsWords: ["みぎミドル"] },
-    { id: "hidari",  label: "左ミドル！",                  display: "左ミドル！",                  ttsWords: ["ひだりミドル"] },
-    { id: "maegeri", label: "前蹴り！",                    display: "前蹴り！",                    ttsWords: ["まえげり"] },
-    { id: "upper",   label: "アッパー！",                  display: "アッパー！",                  ttsWords: ["アッパー"] },
+    { id:"wantwo",  label:"ワンツー！",                 display:"ワンツー！",                ttsWords:["ワン","ツー"] },
+    { id:"combo",   label:"ワンツーフックストレート！",  display:"ワンツー フック ストレート！",ttsWords:["ワン","ツー","フック","ストレート"] },
+    { id:"migi",    label:"右ミドル！",                 display:"右ミドル！",                ttsWords:["みぎミドル"] },
+    { id:"hidari",  label:"左ミドル！",                 display:"左ミドル！",                ttsWords:["ひだりミドル"] },
+    { id:"maegeri", label:"前蹴り！",                   display:"前蹴り！",                  ttsWords:["まえげり"] },
+    { id:"upper",   label:"アッパー！",                 display:"アッパー！",                ttsWords:["アッパー"] },
   ];
-
   const CUSTOM_COUNT = 6;
-  const CUSTOM_IDS   = Array.from({ length: CUSTOM_COUNT }, (_, i) => `custom${i + 1}`);
-
-  // カスタム定義（ラベルはlocalStorageから読む）
-  const CUSTOM_DEFS = CUSTOM_IDS.map((id, i) => ({
-    id,
-    label:    `カスタム${i + 1}`,
-    display:  `カスタム${i + 1}`,
-    ttsWords: [`カスタム${i + 1}`],
-    isCustom: true,
+  const CUSTOM_IDS   = Array.from({length:CUSTOM_COUNT},(_,i)=>`custom${i+1}`);
+  const CUSTOM_DEFS  = CUSTOM_IDS.map((id,i)=>({
+    id, label:`カスタム${i+1}`, display:`カスタム${i+1}`, ttsWords:[`カスタム${i+1}`], isCustom:true
   }));
-
   const CALL_DEFS = [...BASE_DEFS, ...CUSTOM_DEFS];
 
   const MODES = {
-    wantwo:  ["wantwo"],
-    combo:   ["combo"],
-    middle:  ["migi","hidari"],
-    maegeri: ["maegeri"],
-    upper:   ["upper"],
-    random:  ["wantwo","wantwo","combo","migi","hidari","maegeri","upper"],
-    // カスタムモードは動的に "custom1"～"custom6"
+    wantwo:["wantwo"], combo:["combo"], middle:["migi","hidari"],
+    maegeri:["maegeri"], upper:["upper"],
   };
-
   const MODE_REC_IDS = {
-    wantwo:  ["wantwo"],
-    combo:   ["combo"],
-    middle:  ["migi","hidari"],
-    maegeri: ["maegeri"],
-    upper:   ["upper"],
-    random:  ["wantwo","combo","migi","hidari","maegeri","upper"],
+    wantwo:["wantwo"], combo:["combo"], middle:["migi","hidari"],
+    maegeri:["maegeri"], upper:["upper"],
+    random:["wantwo","combo","migi","hidari","maegeri","upper"],
   };
 
   // ============================================================
-  //  AudioContext
+  //  Audio
   // ============================================================
   let audioCtx = null;
   function getCtx() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     return audioCtx;
   }
 
-  const recBuffers  = {};
-  const recBlobUrls = {};
-  let activeRecId   = null;
-  let mediaRecorder = null;
-  let recChunks     = [];
+  // ベル音
+  function playBell() {
+    try {
+      const ctx  = getCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.8);
+      gain.gain.setValueAtTime(1.0, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 1.8);
+    } catch(e){}
+  }
+
+  // バイブレーション
+  function vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e){}
+  }
+
+  const recBuffers={}, recBlobUrls={};
+  let activeRecId=null, mediaRecorder=null, recChunks=[];
 
   // ============================================================
   //  タブ切替
   // ============================================================
   function showTab(tab) {
-    document.getElementById("recSection").style.display   = tab === "rec"   ? "block" : "none";
-    document.getElementById("trainSection").style.display = tab === "train" ? "block" : "none";
-    document.querySelectorAll(".tab").forEach((t, i) => {
-      t.classList.toggle("active", (i===0 && tab==="train") || (i===1 && tab==="rec"));
+    document.getElementById("trainSection").style.display = tab==="train" ? "block":"none";
+    document.getElementById("recSection").style.display   = tab==="rec"   ? "block":"none";
+    document.getElementById("histSection").style.display  = tab==="hist"  ? "block":"none";
+    document.querySelectorAll(".tab").forEach((t,i)=>{
+      t.classList.toggle("active",
+        (i===0&&tab==="train")||(i===1&&tab==="rec")||(i===2&&tab==="hist"));
     });
+    if (tab==="hist") renderHistory();
   }
 
   // ============================================================
-  //  localStorage 保存・復元
+  //  localStorage
   // ============================================================
-  const LS_PREFIX       = "kick_rec_";
-  const LS_LABEL_PREFIX = "kick_label_";
+  const LP="kick_rec_", LL="kick_label_", LD="kick_delay_", LR="kick_rand_", LH="kick_history";
 
-  function bufToBase64(buf) {
-    let binary = "";
-    const bytes = new Uint8Array(buf);
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
-  function base64ToBuf(b64) {
-    const binary = atob(b64);
-    const buf = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
-    return buf.buffer;
-  }
+  function buf2b64(buf){let b="";const u=new Uint8Array(buf);for(let i=0;i<u.byteLength;i++)b+=String.fromCharCode(u[i]);return btoa(b);}
+  function b642buf(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer;}
 
-  async function saveToStorage(id, blob) {
-    const arrayBuf = await blob.arrayBuffer();
-    try { localStorage.setItem(LS_PREFIX + id, bufToBase64(arrayBuf)); } catch(e) {}
-  }
-
-  async function loadFromStorage(id) {
-    const b64 = localStorage.getItem(LS_PREFIX + id);
-    if (!b64) return false;
-    try {
-      const arrayBuf = base64ToBuf(b64);
-      const ctx = getCtx();
-      recBuffers[id] = await ctx.decodeAudioData(arrayBuf.slice(0));
-      const blob = new Blob([base64ToBuf(b64)], { type: "audio/webm" });
-      if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
-      recBlobUrls[id] = URL.createObjectURL(blob);
+  async function saveToStorage(id,blob){try{localStorage.setItem(LP+id,buf2b64(await blob.arrayBuffer()));}catch(e){}}
+  async function loadFromStorage(id){
+    const b64=localStorage.getItem(LP+id); if(!b64) return false;
+    try{
+      const ab=b642buf(b64);
+      recBuffers[id]=await getCtx().decodeAudioData(ab.slice(0));
+      const blob=new Blob([b642buf(b64)],{type:"audio/webm"});
+      if(recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
+      recBlobUrls[id]=URL.createObjectURL(blob);
       return true;
-    } catch(e) { return false; }
+    }catch(e){return false;}
   }
 
-  // ============================================================
-  //  間隔（秒）保存・復元
-  // ============================================================
-  const LS_DELAY_PREFIX = "kick_delay_";
-  const callDelays = {}; // id -> 秒数
-
-  function changeDelay(id, delta) {
-    const current = callDelays[id] || 0;
-    const next    = Math.max(0, Math.min(15, current + delta));
-    callDelays[id] = next;
-    localStorage.setItem(LS_DELAY_PREFIX + id, next);
-    const el = document.getElementById(`delayVal-${id}`);
-    if (el) el.textContent = `${next}秒`;
+  // カスタムラベル
+  function saveCustomLabel(id,label){
+    localStorage.setItem(LL+id,label);
+    const def=CALL_DEFS.find(d=>d.id===id);
+    if(def){def.label=label;def.display=label;def.ttsWords=[label];}
   }
-
-  function loadAllDelays() {
-    CALL_DEFS.forEach(def => {
-      const saved = localStorage.getItem(LS_DELAY_PREFIX + def.id);
-      if (saved !== null) {
-        callDelays[def.id] = parseInt(saved, 10);
-        const el = document.getElementById(`delayVal-${def.id}`);
-        if (el) el.textContent = `${callDelays[def.id]}秒`;
-      }
+  function loadCustomLabels(){
+    CUSTOM_DEFS.forEach(def=>{
+      const s=localStorage.getItem(LL+def.id);
+      if(s){def.label=s;def.display=s;def.ttsWords=[s];
+        const inp=document.getElementById(`labelInput-${def.id}`);
+        if(inp) inp.value=s;}
     });
   }
 
-  // カスタムラベル保存・復元
-  function saveCustomLabel(id, label) {
-    localStorage.setItem(LS_LABEL_PREFIX + id, label);
-    // CALL_DEFS のラベルも更新
-    const def = CALL_DEFS.find(d => d.id === id);
-    if (def) { def.label = label; def.display = label; def.ttsWords = [label]; }
+  // 間隔
+  const callDelays={};
+  function changeDelay(id,d){
+    const n=Math.max(0,Math.min(15,(callDelays[id]||0)+d));
+    callDelays[id]=n; localStorage.setItem(LD+id,n);
+    const el=document.getElementById(`delayVal-${id}`); if(el) el.textContent=`${n}秒`;
   }
-
-  function loadCustomLabels() {
-    CUSTOM_DEFS.forEach(def => {
-      const saved = localStorage.getItem(LS_LABEL_PREFIX + def.id);
-      if (saved) {
-        def.label = saved; def.display = saved; def.ttsWords = [saved];
-        // 入力欄に反映
-        const inp = document.getElementById(`labelInput-${def.id}`);
-        if (inp) inp.value = saved;
-      }
+  function loadAllDelays(){
+    CALL_DEFS.forEach(def=>{
+      const s=localStorage.getItem(LD+def.id);
+      if(s!==null){callDelays[def.id]=parseInt(s,10);
+        const el=document.getElementById(`delayVal-${def.id}`);
+        if(el) el.textContent=`${callDelays[def.id]}秒`;}
     });
   }
 
-  // ============================================================
-  //  録音UI構築
-  // ============================================================
-  function buildRecRow(def, container) {
-    const row = document.createElement("div");
-    row.className = "rec-row";
-    row.id = `row-${def.id}`;
+  // ランダム選択
+  const BASE_MODES_FOR_RAND=["wantwo","combo","middle","maegeri","upper"];
+  const randEnabled={};
+  function toggleRandom(key,checked){
+    randEnabled[key]=checked; localStorage.setItem(LR+key,checked?"1":"0");
+    const lbl=document.getElementById(`randLabel-${key}`);
+    if(lbl) lbl.classList.toggle("checked",checked);
+  }
+  function loadRandSettings(){
+    BASE_MODES_FOR_RAND.forEach(key=>{
+      const s=localStorage.getItem(LR+key);
+      const v=s===null?true:s==="1"; randEnabled[key]=v;
+      const cb=document.getElementById(`rand-${key}`);
+      const lbl=document.getElementById(`randLabel-${key}`);
+      if(cb) cb.checked=v; if(lbl) lbl.classList.toggle("checked",v);
+    });
+    CUSTOM_IDS.forEach(key=>{
+      const v=localStorage.getItem(LR+key)==="1"; randEnabled[key]=v;
+      const cb=document.getElementById(`rand-${key}`);
+      const lbl=document.getElementById(`randLabel-${key}`);
+      if(cb) cb.checked=v; if(lbl) lbl.classList.toggle("checked",v);
+    });
+  }
 
-    const labelHtml = def.isCustom
-      ? `<input class="rec-label-input" id="labelInput-${def.id}"
-           placeholder="名前を入力（例：右ハイキック！）"
-           value="${def.label.startsWith('カスタム') ? '' : def.label}"
-           oninput="onLabelInput('${def.id}', this.value)">`
-      : `<span class="rec-label">${def.label}</span>`;
+  // 履歴
+  function saveRound(){
+    const today=new Date().toISOString().split("T")[0];
+    const hist=JSON.parse(localStorage.getItem(LH)||"[]");
+    hist.push({date:today,ts:Date.now()});
+    if(hist.length>200) hist.splice(0,hist.length-200);
+    localStorage.setItem(LH,JSON.stringify(hist));
+  }
+  function renderHistory(){
+    const hist=JSON.parse(localStorage.getItem(LH)||"[]");
+    const today=new Date().toISOString().split("T")[0];
+    const weekAgo=new Date(Date.now()-7*86400000).toISOString().split("T")[0];
+    const todayCount=hist.filter(h=>h.date===today).length;
+    const weekCount=hist.filter(h=>h.date>=weekAgo).length;
+    document.getElementById("statToday").textContent=todayCount;
+    document.getElementById("statWeek").textContent=weekCount;
+    document.getElementById("statTotal").textContent=hist.length;
+    // 日別まとめ
+    const byDate={};
+    hist.forEach(h=>{byDate[h.date]=(byDate[h.date]||0)+1;});
+    const dates=Object.keys(byDate).sort().reverse().slice(0,30);
+    const listEl=document.getElementById("histList");
+    if(dates.length===0){listEl.innerHTML='<div class="hist-empty">まだ記録がありません<br>トレーニングを完了すると記録されます</div>';return;}
+    listEl.innerHTML=dates.map(d=>{
+      const [y,m,day]=d.split("-");
+      return `<div class="hist-item"><span class="hist-date">${y}/${m}/${day}</span><span class="hist-rounds">${byDate[d]} ラウンド 🥊</span></div>`;
+    }).join("");
+  }
+  function clearHistory(){
+    if(!confirm("履歴をすべて削除しますか？")) return;
+    localStorage.removeItem(LH); renderHistory();
+  }
 
-    row.innerHTML = `
-      <div class="rec-top">
-        ${labelHtml}
-        <span class="rec-status">✅ 録音済み</span>
-      </div>
+  // ============================================================
+  //  録音UI
+  // ============================================================
+  function buildRecRow(def,container){
+    const row=document.createElement("div");
+    row.className="rec-row"; row.id=`row-${def.id}`;
+    const labelHtml=def.isCustom
+      ?`<input class="rec-label-input" id="labelInput-${def.id}" placeholder="名前を入力（例：右ハイキック！）" oninput="onLabelInput('${def.id}',this.value)">`
+      :`<span class="rec-label">${def.label}</span>`;
+    row.innerHTML=`
+      <div class="rec-top">${labelHtml}<span class="rec-status">✅ 録音済み</span></div>
       <div class="rec-btns">
         <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
         <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
       </div>
       <div class="delay-row">
         <span>次まで間隔：</span>
-        <button class="delay-btn" onclick="changeDelay('${def.id}', -1)">－</button>
+        <button class="delay-btn" onclick="changeDelay('${def.id}',-1)">－</button>
         <span class="delay-val" id="delayVal-${def.id}">0秒</span>
-        <button class="delay-btn" onclick="changeDelay('${def.id}', +1)">＋</button>
-        <span style="color:#555; font-size:0.75rem;">（0秒＝即座に次へ）</span>
+        <button class="delay-btn" onclick="changeDelay('${def.id}',+1)">＋</button>
+        <span style="color:#555;font-size:0.72rem">（0秒＝即座に次へ）</span>
       </div>
-      <div class="waveform" id="wave-${def.id}" style="margin-top:8px;display:none">
-        <canvas class="wave-canvas" id="canvas-${def.id}" height="36"></canvas>
-      </div>
-    `;
+      <div class="waveform" id="wave-${def.id}"><canvas class="wave-canvas" id="canvas-${def.id}" height="32"></canvas></div>`;
     container.appendChild(row);
   }
-
-  function buildRecUI() {
-    const baseContainer   = document.getElementById("recListBase");
-    const customContainer = document.getElementById("recListCustom");
-    BASE_DEFS.forEach(def   => buildRecRow(def, baseContainer));
-    CUSTOM_DEFS.forEach(def => buildRecRow(def, customContainer));
+  function buildRecUI(){
+    BASE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListBase")));
+    CUSTOM_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListCustom")));
   }
   buildRecUI();
 
-  // ============================================================
-  //  カスタムモードボタン構築
-  // ============================================================
-  function buildCustomModeButtons() {
-    const container = document.getElementById("customModes");
-    container.innerHTML = "";
-    CUSTOM_DEFS.forEach(def => {
-      const btn = document.createElement("button");
-      btn.className = "mode-btn custom-empty";
-      btn.dataset.mode = def.id;
-      btn.onclick = () => selectMode(btn);
-      btn.id = `modeBtn-${def.id}`;
-      btn.innerHTML = `<span id="modeName-${def.id}">${def.label}</span><br>
+  // カスタムモードボタン
+  function buildCustomModeButtons(){
+    const c=document.getElementById("customModes"); c.innerHTML="";
+    CUSTOM_DEFS.forEach(def=>{
+      const btn=document.createElement("button");
+      btn.className="mode-btn custom-empty"; btn.dataset.mode=def.id;
+      btn.onclick=()=>selectMode(btn); btn.id=`modeBtn-${def.id}`;
+      btn.innerHTML=`<span id="modeName-${def.id}">${def.label}</span>
         <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>
         <label class="rand-toggle" id="randLabel-${def.id}" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">ランダムに含める
         </label>`;
-      container.appendChild(btn);
+      c.appendChild(btn);
     });
   }
   buildCustomModeButtons();
 
-  // ============================================================
-  //  ラベル入力ハンドラ
-  // ============================================================
-  function onLabelInput(id, value) {
-    const trimmed = value.trim() || `カスタム${id.replace('custom','')}`;
-    saveCustomLabel(id, trimmed);
-    // モードボタンのラベル更新
-    const nameEl = document.getElementById(`modeName-${id}`);
-    if (nameEl) nameEl.textContent = trimmed;
+  function onLabelInput(id,value){
+    const t=value.trim()||`カスタム${id.replace("custom","")}`;
+    saveCustomLabel(id,t);
+    const el=document.getElementById(`modeName-${id}`); if(el) el.textContent=t;
     updateModeButtons();
   }
 
-  // ============================================================
-  //  ページ読み込み時復元
-  // ============================================================
-  async function restoreAllFromStorage() {
-    loadCustomLabels(); // ラベルを先に復元
-    loadAllDelays();    // 間隔を復元
-    for (const def of CALL_DEFS) {
-      const ok = await loadFromStorage(def.id);
-      if (ok) onRecordDone(def.id, true);
-    }
+  // 復元
+  async function restoreAllFromStorage(){
+    loadCustomLabels(); loadAllDelays(); loadRandSettings();
+    for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
   }
-  let restored = false;
-  async function ensureRestored() {
-    if (restored) return;
-    restored = true;
-    await restoreAllFromStorage();
-  }
-  document.addEventListener("click", ensureRestored, { once: true });
+  let restored=false;
+  async function ensureRestored(){if(restored)return;restored=true;await restoreAllFromStorage();}
+  document.addEventListener("click",ensureRestored,{once:true});
 
   // ============================================================
   //  録音ロジック
   // ============================================================
-  async function toggleRecord(id) {
-    if (activeRecId && activeRecId !== id) stopRecording();
-    if (activeRecId === id) { stopRecording(); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = getCtx();
-      if (ctx.state === "suspended") await ctx.resume();
-      recChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(recChunks, { type: "audio/webm" });
-        await saveToStorage(id, blob);
-        const arrayBuf = await blob.arrayBuffer();
-        recBuffers[id] = await ctx.decodeAudioData(arrayBuf);
-        if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
-        recBlobUrls[id] = URL.createObjectURL(blob);
-        stream.getTracks().forEach(t => t.stop());
-        onRecordDone(id);
-        activeRecId = null;
+  async function toggleRecord(id){
+    if(activeRecId&&activeRecId!==id) stopRecording();
+    if(activeRecId===id){stopRecording();return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const ctx=getCtx(); if(ctx.state==="suspended") await ctx.resume();
+      recChunks=[]; mediaRecorder=new MediaRecorder(stream);
+      mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recChunks.push(e.data);};
+      mediaRecorder.onstop=async()=>{
+        const blob=new Blob(recChunks,{type:"audio/webm"});
+        await saveToStorage(id,blob);
+        const ab=await blob.arrayBuffer();
+        recBuffers[id]=await ctx.decodeAudioData(ab);
+        if(recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
+        recBlobUrls[id]=URL.createObjectURL(blob);
+        stream.getTracks().forEach(t=>t.stop());
+        onRecordDone(id); activeRecId=null;
       };
-      mediaRecorder.start();
-      activeRecId = id;
-      const btn = document.getElementById(`recBtn-${id}`);
-      btn.textContent = "⏹ 停止";
-      btn.classList.add("recording");
-    } catch(e) {
-      alert("マイクへのアクセスを許可してください。");
-    }
+      mediaRecorder.start(); activeRecId=id;
+      const btn=document.getElementById(`recBtn-${id}`);
+      btn.textContent="⏹ 停止"; btn.classList.add("recording");
+    }catch(e){alert("マイクへのアクセスを許可してください。");}
   }
+  function stopRecording(){if(mediaRecorder&&mediaRecorder.state!=="inactive")mediaRecorder.stop();}
 
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  function onRecordDone(id,silent=false){
+    const rb=document.getElementById(`recBtn-${id}`);
+    const pb=document.getElementById(`playBtn-${id}`);
+    if(rb){rb.textContent="🔄 録り直し";rb.classList.remove("recording");}
+    if(pb) pb.disabled=false;
+    const row=document.getElementById(`row-${id}`); if(row) row.classList.add("done");
+    drawWaveform(id); updateVoiceBadge(); updateModeButtons();
   }
-
-  function onRecordDone(id, silent = false) {
-    const recBtn  = document.getElementById(`recBtn-${id}`);
-    const playBtn = document.getElementById(`playBtn-${id}`);
-    if (recBtn) { recBtn.textContent = "🔄 録り直し"; recBtn.classList.remove("recording"); }
-    if (playBtn) playBtn.disabled = false;
-    const row = document.getElementById(`row-${id}`);
-    if (row) row.classList.add("done");
-    drawWaveform(id);
-    updateVoiceBadge();
-    updateModeButtons();
-  }
-
-  function drawWaveform(id) {
-    const buf    = recBuffers[id]; if (!buf) return;
-    const wrap   = document.getElementById(`wave-${id}`);
-    const canvas = document.getElementById(`canvas-${id}`);
-    wrap.style.display = "block";
-    canvas.width = wrap.offsetWidth || 400; canvas.height = 36;
-    const ctx  = canvas.getContext("2d");
-    const data = buf.getChannelData(0);
-    const step = Math.ceil(data.length / canvas.width);
-    const amp  = canvas.height / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#e94560"; ctx.lineWidth = 1; ctx.beginPath();
-    for (let i = 0; i < canvas.width; i++) {
-      let min = 1, max = -1;
-      for (let j = 0; j < step; j++) {
-        const v = data[i * step + j] || 0;
-        if (v < min) min = v; if (v > max) max = v;
-      }
-      ctx.moveTo(i, (1 + min) * amp); ctx.lineTo(i, (1 + max) * amp);
+  function drawWaveform(id){
+    const buf=recBuffers[id]; if(!buf) return;
+    const wrap=document.getElementById(`wave-${id}`);
+    const canvas=document.getElementById(`canvas-${id}`);
+    wrap.style.display="block"; canvas.width=wrap.offsetWidth||380; canvas.height=32;
+    const ctx=canvas.getContext("2d"),data=buf.getChannelData(0);
+    const step=Math.ceil(data.length/canvas.width),amp=canvas.height/2;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle="#e94560"; ctx.lineWidth=1; ctx.beginPath();
+    for(let i=0;i<canvas.width;i++){
+      let mn=1,mx=-1;
+      for(let j=0;j<step;j++){const v=data[i*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
+      ctx.moveTo(i,(1+mn)*amp); ctx.lineTo(i,(1+mx)*amp);
     }
     ctx.stroke();
   }
-
-  function playRec(id) {
-    if (!recBlobUrls[id]) return;
-    const audio = new Audio(recBlobUrls[id]);
-    audio.playbackRate = speechRate;
-    audio.preservesPitch = true;
-    audio.mozPreservesPitch = true;
-    audio.webkitPreservesPitch = true;
-    audio.volume = 1.0;
-    audio.play();
+  function playRec(id){
+    if(!recBlobUrls[id]) return;
+    const a=new Audio(recBlobUrls[id]);
+    a.playbackRate=speechRate; a.preservesPitch=true;
+    a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
+    a.play();
   }
-
-  function updateVoiceBadge() {
-    const allIds = CALL_DEFS.map(d => d.id);
-    const done   = allIds.filter(id => recBlobUrls[id]).length;
-    const badge  = document.getElementById("voiceBadge");
-    if (done === 0) {
-      badge.innerHTML = "声: AIの声"; badge.style.color = "#555";
-    } else {
-      badge.innerHTML = `声: <span>自分の声（${done}コール録音済み）</span>`;
-    }
+  function updateVoiceBadge(){
+    const done=CALL_DEFS.filter(d=>recBlobUrls[d.id]).length;
+    const b=document.getElementById("voiceBadge");
+    b.innerHTML=done===0?"声: AIの声":`声: <span>自分の声（${done}コール録音済み）</span>`;
   }
-
-  function updateModeButtons() {
-    // 基本モードボタン
-    document.querySelectorAll("#baseModes .mode-btn").forEach(btn => {
-      const mode    = btn.dataset.mode;
-      const ids     = MODE_REC_IDS[mode] || [];
-      const done    = ids.filter(id => recBlobUrls[id]).length;
-      const allDone = done === ids.length;
-      btn.classList.toggle("has-rec", allDone);
-      const mark = document.getElementById(`mark-${mode}`);
-      if (mark) {
-        mark.textContent = allDone ? "🎙 録音済" : done > 0 ? `🎙 ${done}/${ids.length}` : "⚪ 未録音";
-      }
+  function updateModeButtons(){
+    document.querySelectorAll("#baseModes .mode-btn").forEach(btn=>{
+      const mode=btn.dataset.mode; if(mode==="random") return;
+      const ids=MODE_REC_IDS[mode]||[];
+      const done=ids.filter(id=>recBlobUrls[id]).length;
+      btn.classList.toggle("has-rec",done===ids.length);
+      const mk=document.getElementById(`mark-${mode}`);
+      if(mk) mk.textContent=done===ids.length?"🎙 録音済":done>0?`🎙 ${done}/${ids.length}`:"⚪ 未録音";
     });
-
-    // カスタムモードボタン
-    CUSTOM_DEFS.forEach(def => {
-      const btn    = document.getElementById(`modeBtn-${def.id}`);
-      const mark   = document.getElementById(`mark-${def.id}`);
-      const nameEl = document.getElementById(`modeName-${def.id}`);
-      if (!btn) return;
-      const hasRec   = !!recBlobUrls[def.id];
-      const hasLabel = !def.label.startsWith('カスタム');
-      // 名前が設定されているかlocalStorageにあるか
-      const savedLabel = localStorage.getItem(LS_LABEL_PREFIX + def.id);
-      const isNamed    = savedLabel && savedLabel.trim().length > 0;
-      btn.classList.toggle("custom-empty", !isNamed && !hasRec);
-      btn.classList.toggle("has-rec", hasRec);
-      if (nameEl) nameEl.textContent = isNamed ? savedLabel : def.label;
-      if (mark)   mark.textContent   = hasRec ? "🎙 録音済" : "⚪ 未録音";
+    CUSTOM_DEFS.forEach(def=>{
+      const btn=document.getElementById(`modeBtn-${def.id}`);
+      const mk=document.getElementById(`mark-${def.id}`);
+      const nm=document.getElementById(`modeName-${def.id}`);
+      if(!btn) return;
+      const hasRec=!!recBlobUrls[def.id];
+      const saved=localStorage.getItem(LL+def.id);
+      const isNamed=saved&&saved.trim().length>0;
+      btn.classList.toggle("custom-empty",!isNamed&&!hasRec);
+      btn.classList.toggle("has-rec",hasRec);
+      if(nm) nm.textContent=isNamed?saved:def.label;
+      if(mk) mk.textContent=hasRec?"🎙 録音済":"⚪ 未録音";
     });
   }
 
   // ============================================================
   //  TTS
   // ============================================================
-  let synth  = window.speechSynthesis;
-  let voices = [];
-  function loadVoices() { voices = synth.getVoices(); }
+  const synth=window.speechSynthesis;
+  let voices=[];
+  function loadVoices(){voices=synth.getVoices();}
   loadVoices();
-  if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
-  function getJpVoice() {
-    return voices.find(v => v.lang === "ja-JP") || voices.find(v => v.lang.startsWith("ja")) || voices[0];
+  if(speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged=loadVoices;
+  function getJpVoice(){return voices.find(v=>v.lang==="ja-JP")||voices.find(v=>v.lang.startsWith("ja"))||voices[0];}
+  function makeUtter(word){
+    const u=new SpeechSynthesisUtterance(word);
+    u.lang="ja-JP"; u.rate=1.1*speechRate; u.pitch=1.2; u.volume=1.0;
+    const v=getJpVoice(); if(v) u.voice=v; return u;
   }
-  function makeUtter(word) {
-    const u = new SpeechSynthesisUtterance(word);
-    u.lang = "ja-JP"; u.rate = 1.1 * speechRate; u.pitch = 1.2; u.volume = 1.0;
-    const v = getJpVoice(); if (v) u.voice = v;
-    return u;
-  }
-
-  // ============================================================
-  //  再生（自分の声優先 → TTSフォールバック）
-  // ============================================================
-  function playCallId(id) {
-    return new Promise(resolve => {
-      if (recBlobUrls[id]) {
-        const audio = new Audio(recBlobUrls[id]);
-        audio.playbackRate      = speechRate;
-        audio.preservesPitch    = true;
-        audio.mozPreservesPitch = true;
-        audio.webkitPreservesPitch = true;
-        audio.volume = 1.0;
-        audio.onended = () => resolve();
-        audio.onerror = () => resolve();
-        audio.play();
-      } else {
-        const def   = CALL_DEFS.find(d => d.id === id);
-        const words = def ? def.ttsWords : [id];
+  function playCallId(id){
+    return new Promise(resolve=>{
+      if(recBlobUrls[id]){
+        const a=new Audio(recBlobUrls[id]);
+        a.playbackRate=speechRate; a.preservesPitch=true;
+        a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
+        a.onended=()=>resolve(); a.onerror=()=>resolve(); a.play();
+      }else{
+        const def=CALL_DEFS.find(d=>d.id===id);
+        const words=def?def.ttsWords:[id];
         synth.cancel();
-        words.forEach((word, i) => {
-          const u = makeUtter(word);
-          if (i === words.length - 1) u.onend = u.onerror = () => resolve();
-          synth.speak(u);
-        });
+        words.forEach((w,i)=>{const u=makeUtter(w);if(i===words.length-1)u.onend=u.onerror=()=>resolve();synth.speak(u);});
       }
     });
   }
-
-  function playTTS(words) {
-    return new Promise(resolve => {
+  function playTTS(words){
+    return new Promise(resolve=>{
       synth.cancel();
-      words.forEach((word, i) => {
-        const u = makeUtter(word);
-        if (i === words.length - 1) u.onend = u.onerror = () => resolve();
-        synth.speak(u);
-      });
+      words.forEach((w,i)=>{const u=makeUtter(w);if(i===words.length-1)u.onend=u.onerror=()=>resolve();synth.speak(u);});
     });
   }
 
   // ============================================================
-  //  話す速さコントロール
+  //  速さ
   // ============================================================
-  let speechRate = 1.0;
-
-  function setSpeechRate(rate, label) {
-    speechRate = rate;
-    document.getElementById("rateLabel").textContent = label;
-    document.querySelectorAll(".spd-btn").forEach(b => b.classList.remove("fast-active"));
-    const map = { 0.75: "slow", 1.0: "normal", 1.4: "fast", 1.8: "vfast" };
-    const btn = document.getElementById(`rateBtn-${map[rate]}`);
-    if (btn) btn.classList.add("fast-active");
+  let speechRate=1.0;
+  function setSpeechRate(rate,label,key){
+    speechRate=rate;
+    document.querySelectorAll(".spd-btn").forEach(b=>b.classList.remove("active"));
+    const btn=document.getElementById(`spd-${key}`); if(btn) btn.classList.add("active");
   }
+
+  // ============================================================
+  //  ランダムコールリスト取得
+  // ============================================================
+  function getCallList(mode){
+    if(CUSTOM_IDS.includes(mode)) return [mode];
+    if(mode==="random"){
+      let list=[];
+      if(randEnabled["wantwo"]!==false)  list.push("wantwo","wantwo");
+      if(randEnabled["combo"]!==false)   list.push("combo");
+      if(randEnabled["middle"]!==false)  list.push("migi","hidari");
+      if(randEnabled["maegeri"]!==false) list.push("maegeri");
+      if(randEnabled["upper"]!==false)   list.push("upper");
+      CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
+      return list.length>0?list:["wantwo"];
+    }
+    return MODES[mode]||[mode];
+  }
+
+  // ============================================================
+  //  設定の読み込み・保存
+  // ============================================================
+  function loadSettings(){
+    const r=localStorage.getItem("kick_rounds");
+    const w=localStorage.getItem("kick_work");
+    const rs=localStorage.getItem("kick_rest");
+    if(r) document.getElementById("roundsInput").value=r;
+    if(w) document.getElementById("workInput").value=w;
+    if(rs) document.getElementById("restInput").value=rs;
+    updateTimerDisplay();
+  }
+  function onSettingChange(){
+    localStorage.setItem("kick_rounds",getRounds());
+    localStorage.setItem("kick_work",getWorkMin());
+    localStorage.setItem("kick_rest",getRestMin());
+    if(!running) updateTimerDisplay();
+  }
+  function getRounds(){return Math.max(1,Math.min(20,parseInt(document.getElementById("roundsInput").value)||3));}
+  function getWorkMin(){return Math.max(1,Math.min(99,parseInt(document.getElementById("workInput").value)||2));}
+  function getRestMin(){return Math.max(0,Math.min(99,parseInt(document.getElementById("restInput").value)||1));}
+  function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkMin()*60);}
+
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();});
 
   // ============================================================
   //  トレーニング
   // ============================================================
-  let selectedMode  = "random";
-  let timerInterval = null;
-  let callTimeout   = null;
-  let timeLeft      = 0;
-  let running       = false;
-  let shuffleQueue  = [];
+  let selectedMode="random";
+  let timerInterval=null, callTimeout=null;
+  let timeLeft=0, running=false;
+  let currentRound=1, isResting=false;
+  let shuffleQueue=[];
 
-  // ============================================================
-  //  ランダム選択
-  // ============================================================
-  const LS_RAND_PREFIX = "kick_rand_";
+  function formatTime(sec){const m=Math.floor(sec/60),s=sec%60;return`${m}:${s.toString().padStart(2,"0")}`;}
 
-  // デフォルトは基本モード全部ON
-  const BASE_MODES_FOR_RAND = ["wantwo","combo","middle","maegeri","upper"];
-  const randEnabled = {}; // mode/id -> bool
-
-  function toggleRandom(key, checked) {
-    randEnabled[key] = checked;
-    localStorage.setItem(LS_RAND_PREFIX + key, checked ? "1" : "0");
-    const label = document.getElementById(`randLabel-${key}`);
-    if (label) label.classList.toggle("checked", checked);
-  }
-
-  function loadRandSettings() {
-    // 基本モード
-    BASE_MODES_FOR_RAND.forEach(key => {
-      const saved = localStorage.getItem(LS_RAND_PREFIX + key);
-      const val   = saved === null ? true : saved === "1";
-      randEnabled[key] = val;
-      const cb    = document.getElementById(`rand-${key}`);
-      const label = document.getElementById(`randLabel-${key}`);
-      if (cb)    cb.checked = val;
-      if (label) label.classList.toggle("checked", val);
-    });
-    // カスタム
-    CUSTOM_IDS.forEach(key => {
-      const saved = localStorage.getItem(LS_RAND_PREFIX + key);
-      const val   = saved === "1";
-      randEnabled[key] = val;
-      const cb    = document.getElementById(`rand-${key}`);
-      const label = document.getElementById(`randLabel-${key}`);
-      if (cb)    cb.checked = val;
-      if (label) label.classList.toggle("checked", val);
-    });
-  }
-  // DOMContentLoaded後に読み込む
-  window.addEventListener('DOMContentLoaded', loadRandSettings);
-
-  // 時間設定（localStorageから復元）
-  let trainingMinutes = parseInt(localStorage.getItem('kick_duration') || '2', 10);
-  function getDuration() { return trainingMinutes * 60; }
-  function onDurationInput(val) {
-    const n = Math.max(1, Math.min(99, parseInt(val, 10) || 2));
-    trainingMinutes = n;
-    localStorage.setItem('kick_duration', n);
-    // タイマー表示をリセット
-    if (!running) document.getElementById("timerDisplay").textContent = formatTime(getDuration());
-  }
-  // 入力欄に保存済みの値をセット
-  window.addEventListener('DOMContentLoaded', () => {
-    const inp = document.getElementById('durationInput');
-    if (inp) inp.value = trainingMinutes;
-    document.getElementById("timerDisplay").textContent = formatTime(getDuration());
-  });
-
-  function getCallList(mode) {
-    // カスタムモードの場合はそのIDのみ
-    if (CUSTOM_IDS.includes(mode)) return [mode];
-    if (mode === "random") {
-      let list = [];
-      // 基本モード：チェックONのものを追加
-      if (randEnabled["wantwo"]  !== false) list.push("wantwo", "wantwo");
-      if (randEnabled["combo"]   !== false) list.push("combo");
-      if (randEnabled["middle"]  !== false) list.push("migi", "hidari");
-      if (randEnabled["maegeri"] !== false) list.push("maegeri");
-      if (randEnabled["upper"]   !== false) list.push("upper");
-      // カスタム：チェックON＆録音済みのものを追加
-      CUSTOM_IDS.forEach(id => {
-        if (randEnabled[id] && recBlobUrls[id]) list.push(id);
-      });
-      return list.length > 0 ? list : ["wantwo"]; // 何もなければデフォルト
-    }
-    return MODES[mode] || [mode];
-  }
-
-  function nextFromQueue(list) {
-    if (shuffleQueue.length === 0) {
-      shuffleQueue = [...list].sort(() => Math.random() - 0.5);
-    }
+  function nextFromQueue(list){
+    if(shuffleQueue.length===0) shuffleQueue=[...list].sort(()=>Math.random()-0.5);
     return shuffleQueue.shift();
   }
-
-  function selectMode(btn) {
-    if (running) return;
-    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedMode = btn.dataset.mode;
-    shuffleQueue = [];
+  function selectMode(btn){
+    if(running) return;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active"); selectedMode=btn.dataset.mode; shuffleQueue=[];
   }
 
-  function formatTime(sec) {
-    const m = Math.floor(sec / 60), s = sec % 60;
-    return `${m}:${s.toString().padStart(2,"0")}`;
+  function updateRoundLabel(){
+    const lbl=document.getElementById("roundLabel");
+    if(isResting){lbl.textContent=`ROUND ${currentRound} 終了 ／ 休憩中`;lbl.className="round-label rest";}
+    else{lbl.textContent=`ROUND ${currentRound} / ${getRounds()}`;lbl.className="round-label";}
   }
 
-  async function scheduleNextCall() {
-    if (!running) return;
-    const list = getCallList(selectedMode);
-    const id   = selectedMode === "random"
-      ? nextFromQueue(list)
-      : list[Math.floor(Math.random() * list.length)];
-    const def  = CALL_DEFS.find(d => d.id === id);
-    document.getElementById("currentCall").textContent = def ? def.display : id;
+  async function scheduleNextCall(){
+    if(!running||isResting) return;
+    const list=getCallList(selectedMode);
+    const id=selectedMode==="random"?nextFromQueue(list):list[Math.floor(Math.random()*list.length)];
+    const def=CALL_DEFS.find(d=>d.id===id);
+    document.getElementById("currentCall").textContent=def?def.display:id;
+    vibrate([80]);
     await playCallId(id);
-    if (!running) return;
-    const delaySec = callDelays[id] || 0;
-    callTimeout = setTimeout(scheduleNextCall, 300 + delaySec * 1000);
+    if(!running||isResting) return;
+    const delay=(callDelays[id]||0)*1000;
+    callTimeout=setTimeout(scheduleNextCall,300+delay);
   }
 
-  async function startTraining() {
-    if (running) return;
-    if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume();
-    running  = true;
-    timeLeft = getDuration();
-    document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
-    document.getElementById("status").textContent = "トレーニング中...";
-    document.getElementById("startBtn").disabled = true;
-    document.querySelectorAll(".mode-btn").forEach(b => b.style.pointerEvents = "none");
-    document.getElementById("currentCall").textContent = "スタート！";
-    await playTTS(["スタート"]);
-    callTimeout = setTimeout(scheduleNextCall, 600);
-    timerInterval = setInterval(() => {
+  async function startRound(){
+    isResting=false;
+    timeLeft=getWorkMin()*60;
+    updateRoundLabel();
+    document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
+    document.getElementById("currentCall").textContent="スタート！";
+    document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
+    playBell(); vibrate([200,100,200]);
+    await playTTS([`ラウンド${currentRound}`]);
+    callTimeout=setTimeout(scheduleNextCall,600);
+    timerInterval=setInterval(()=>{
       timeLeft--;
-      document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
-      if (timeLeft <= 0) stopTraining(true);
-    }, 1000);
+      document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
+      if(timeLeft<=0){clearInterval(timerInterval);onRoundEnd();}
+    },1000);
   }
 
-  async function stopTraining(finished = false) {
-    running = false;
-    clearInterval(timerInterval);
-    clearTimeout(callTimeout);
-    synth.cancel();
-    document.getElementById("startBtn").disabled = false;
-    document.querySelectorAll(".mode-btn").forEach(b => b.style.pointerEvents = "auto");
-    timeLeft = getDuration();
-    document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
-    if (finished) {
-      document.getElementById("currentCall").textContent = "終了！";
-      document.getElementById("status").textContent = "2分間お疲れ様でした！";
+  async function onRoundEnd(){
+    clearTimeout(callTimeout); synth.cancel();
+    saveRound(); // 履歴に記録
+    playBell(); vibrate([300,100,300,100,300]);
+    const totalRounds=getRounds();
+    if(currentRound>=totalRounds){
+      // 全ラウンド終了
+      isResting=false;
+      document.getElementById("roundLabel").textContent="全ラウンド終了！";
+      document.getElementById("currentCall").textContent="🎉 お疲れ様！";
+      document.getElementById("status").textContent=`${totalRounds}ラウンド完了！お疲れ様でした！`;
       await playTTS(["終了。お疲れ様でした。"]);
+      finishTraining();
     } else {
-      document.getElementById("currentCall").textContent = "－";
-      document.getElementById("status").textContent = "停止しました";
+      // 休憩
+      const restSec=getRestMin()*60;
+      if(restSec===0){
+        currentRound++; await startRound();
+      } else {
+        isResting=true; timeLeft=restSec; updateRoundLabel();
+        document.getElementById("currentCall").textContent="💤 休憩";
+        document.getElementById("status").textContent="休憩中...次のラウンドまで待機";
+        await playTTS(["休憩"]);
+        timerInterval=setInterval(()=>{
+          timeLeft--;
+          document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
+          if(timeLeft<=0){clearInterval(timerInterval);currentRound++;startRound();}
+        },1000);
+      }
     }
+  }
+
+  async function startTraining(){
+    if(running) return;
+    if(audioCtx&&audioCtx.state==="suspended") await audioCtx.resume();
+    running=true; currentRound=1; shuffleQueue=[];
+    document.getElementById("startBtn").disabled=true;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="none");
+    await startRound();
+  }
+
+  function finishTraining(){
+    running=false;
+    document.getElementById("startBtn").disabled=false;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="auto");
+    updateTimerDisplay();
+  }
+
+  function stopTraining(){
+    if(!running) return;
+    running=false; isResting=false;
+    clearInterval(timerInterval); clearTimeout(callTimeout); synth.cancel();
+    document.getElementById("startBtn").disabled=false;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="auto");
+    document.getElementById("roundLabel").textContent="";
+    document.getElementById("currentCall").textContent="－";
+    document.getElementById("status").textContent="停止しました";
+    updateTimerDisplay();
   }
   </script>
 
   <script>
-  // ============================================================
-  //  PWA: サービスワーカー登録
-  // ============================================================
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
+  // PWA
+  if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js").catch(()=>{});});}
+  let deferredPrompt=null;
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;showBanner("android");});
+  function showBanner(type){
+    const b=document.getElementById("installBanner");
+    if(type==="ios"){document.getElementById("installMsg").textContent="Safariの共有ボタン→「ホーム画面に追加」でインストールできます";document.getElementById("installBtn").style.display="none";}
+    b.classList.remove("hidden");
   }
-
-  // ============================================================
-  //  PWA: インストールプロンプト (Android Chrome)
-  // ============================================================
-  let deferredPrompt = null;
-
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    showBanner('android');
-  });
-
-  function showBanner(type) {
-    const banner = document.getElementById('installBanner');
-    if (type === 'ios') {
-      document.getElementById('installMsg').textContent =
-        'Safariの 共有ボタン → 「ホーム画面に追加」でインストールできます';
-      document.getElementById('installBtn').style.display = 'none';
-    }
-    banner.classList.remove('hidden');
-  }
-
-  function doInstall() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => { deferredPrompt = null; dismissBanner(); });
-  }
-
-  function dismissBanner() {
-    document.getElementById('installBanner').classList.add('hidden');
-    sessionStorage.setItem('installDismissed', '1');
-  }
-
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isInStandalone = window.navigator.standalone === true;
-  if (isIos && !isInStandalone && !sessionStorage.getItem('installDismissed')) {
-    showBanner('ios');
-  }
+  function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;dismissBanner();});}
+  function dismissBanner(){document.getElementById("installBanner").classList.add("hidden");sessionStorage.setItem("installDismissed","1");}
+  const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIos&&!navigator.standalone&&!sessionStorage.getItem("installDismissed")) showBanner("ios");
   </script>
 </body>
 </html>
