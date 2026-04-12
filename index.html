@@ -20,7 +20,7 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 24px 16px;
+      padding: 24px 16px 80px;
     }
     h1 { font-size: 1.5rem; margin-bottom: 6px; color: #e94560; letter-spacing: 2px; }
 
@@ -32,6 +32,7 @@
     /* 録音セクション */
     #recSection { width: 100%; max-width: 500px; }
     .rec-title { font-size: 0.9rem; color: #aaa; margin-bottom: 16px; text-align: center; line-height: 1.7; }
+    .rec-section-title { font-size: 0.85rem; color: #e94560; font-weight: bold; margin: 18px 0 10px; letter-spacing: 1px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
     .rec-list { display: flex; flex-direction: column; gap: 12px; }
     .rec-row {
       background: #16213e; border: 2px solid #0f3460;
@@ -40,6 +41,14 @@
     .rec-row.done { border-color: #2ecc71; }
     .rec-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .rec-label { flex: 1; font-size: 1.05rem; font-weight: bold; color: #f0c040; }
+    /* カスタム用ラベル入力 */
+    .rec-label-input {
+      flex: 1; background: #0d1b2a; border: 1px solid #0f3460; border-radius: 6px;
+      color: #f0c040; font-size: 1rem; font-weight: bold; padding: 4px 8px;
+      outline: none;
+    }
+    .rec-label-input:focus { border-color: #e94560; }
+    .rec-label-input::placeholder { color: #444; font-weight: normal; }
     .rec-status { font-size: 0.78rem; color: #2ecc71; display: none; }
     .rec-row.done .rec-status { display: inline; }
     .rec-btns { display: flex; gap: 8px; }
@@ -59,8 +68,9 @@
     .timer-display { font-size: 4rem; font-weight: bold; color: #f5f5f5; text-align: center; margin: 10px 0; font-variant-numeric: tabular-nums; }
     .current-call { font-size: 2rem; font-weight: bold; color: #f0c040; min-height: 3rem; margin-bottom: 12px; text-align: center; }
 
-    /* モードボタン 3列対応 */
-    .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    /* モードボタン */
+    .mode-section-title { font-size: 0.8rem; color: #aaa; margin: 0 0 8px; letter-spacing: 1px; }
+    .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .mode-btn {
       background: #16213e; border: 2px solid #0f3460; color: #ccc;
       padding: 14px 6px; border-radius: 12px; font-size: 0.82rem;
@@ -70,6 +80,9 @@
     .mode-btn.active { border-color: #e94560; background: #e94560; color: #fff; }
     .mode-btn .rec-mark { font-size: 0.68rem; display: inline-block; margin-top: 4px; color: #555; }
     .mode-btn.has-rec .rec-mark { color: #2ecc71; }
+    /* カスタムボタン未設定時 */
+    .mode-btn.custom-empty { opacity: 0.45; border-style: dashed; }
+    .mode-btn.custom-empty:hover { opacity: 0.7; }
 
     /* 速度コントロール */
     .speed-section { margin-bottom: 16px; }
@@ -111,7 +124,7 @@
   </style>
 </head>
 <body>
-  <!-- インストールバナー (Android: 自動, iOS: 手動案内) -->
+  <!-- インストールバナー -->
   <div id="installBanner" class="hidden">
     <div class="install-text">
       <strong>📲 アプリをインストール</strong>
@@ -134,7 +147,10 @@
       各コールを<strong>1回だけ</strong>録音してください。<br>
       録音した声がトレーニング中に自動リピートされます。
     </p>
-    <div class="rec-list" id="recList"></div>
+    <div class="rec-section-title">▼ 基本コール</div>
+    <div class="rec-list" id="recListBase"></div>
+    <div class="rec-section-title" style="margin-top:20px">▼ カスタムコール（自由に名前をつけて録音）</div>
+    <div class="rec-list" id="recListCustom"></div>
   </div>
 
   <!-- トレーニングタブ -->
@@ -143,7 +159,8 @@
     <div class="current-call"  id="currentCall">－</div>
     <div class="voice-badge"   id="voiceBadge">声: AIの声</div>
 
-    <div class="modes">
+    <p class="mode-section-title">基本モード</p>
+    <div class="modes" id="baseModes">
       <button class="mode-btn active" data-mode="wantwo" onclick="selectMode(this)">
         ワンツー<br><small>2分間</small><br><span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
       </button>
@@ -163,6 +180,9 @@
         全部<br>ランダム<br><small>2分間</small><br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
       </button>
     </div>
+
+    <p class="mode-section-title" style="margin-top:6px">カスタムモード</p>
+    <div class="modes" id="customModes"></div>
 
     <div class="speed-section">
       <div class="speed-label-row">話す速さ：<span id="rateLabel">普通</span></div>
@@ -185,7 +205,7 @@
   // ============================================================
   //  コール定義
   // ============================================================
-  const CALL_DEFS = [
+  const BASE_DEFS = [
     { id: "wantwo",  label: "ワンツー！",                  display: "ワンツー！",                  ttsWords: ["ワン","ツー"] },
     { id: "combo",   label: "ワンツー・フック・ストレート！",  display: "ワンツー フック ストレート！",   ttsWords: ["ワン","ツー","フック","ストレート"] },
     { id: "migi",    label: "右ミドル！",                  display: "右ミドル！",                  ttsWords: ["みぎミドル"] },
@@ -194,6 +214,20 @@
     { id: "upper",   label: "アッパー！",                  display: "アッパー！",                  ttsWords: ["アッパー"] },
   ];
 
+  const CUSTOM_COUNT = 6;
+  const CUSTOM_IDS   = Array.from({ length: CUSTOM_COUNT }, (_, i) => `custom${i + 1}`);
+
+  // カスタム定義（ラベルはlocalStorageから読む）
+  const CUSTOM_DEFS = CUSTOM_IDS.map((id, i) => ({
+    id,
+    label:    `カスタム${i + 1}`,
+    display:  `カスタム${i + 1}`,
+    ttsWords: [`カスタム${i + 1}`],
+    isCustom: true,
+  }));
+
+  const CALL_DEFS = [...BASE_DEFS, ...CUSTOM_DEFS];
+
   const MODES = {
     wantwo:  ["wantwo"],
     combo:   ["combo"],
@@ -201,9 +235,9 @@
     maegeri: ["maegeri"],
     upper:   ["upper"],
     random:  ["wantwo","wantwo","combo","migi","hidari","maegeri","upper"],
+    // カスタムモードは動的に "custom1"～"custom6"
   };
 
-  // モードボタンの録音チェック対象
   const MODE_REC_IDS = {
     wantwo:  ["wantwo"],
     combo:   ["combo"],
@@ -222,8 +256,8 @@
     return audioCtx;
   }
 
-  const recBuffers  = {};   // id -> AudioBuffer（波形描画用）
-  const recBlobUrls = {};   // id -> ObjectURL（ピッチ保持再生用）
+  const recBuffers  = {};
+  const recBlobUrls = {};
   let activeRecId   = null;
   let mediaRecorder = null;
   let recChunks     = [];
@@ -242,16 +276,15 @@
   // ============================================================
   //  localStorage 保存・復元
   // ============================================================
-  const LS_PREFIX = "kick_rec_";
+  const LS_PREFIX       = "kick_rec_";
+  const LS_LABEL_PREFIX = "kick_label_";
 
-  // ArrayBuffer → base64 文字列
   function bufToBase64(buf) {
     let binary = "";
     const bytes = new Uint8Array(buf);
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
   }
-  // base64 → ArrayBuffer
   function base64ToBuf(b64) {
     const binary = atob(b64);
     const buf = new Uint8Array(binary.length);
@@ -269,10 +302,8 @@
     if (!b64) return false;
     try {
       const arrayBuf = base64ToBuf(b64);
-      // 波形用 AudioBuffer
       const ctx = getCtx();
       recBuffers[id] = await ctx.decodeAudioData(arrayBuf.slice(0));
-      // 再生用 BlobURL
       const blob = new Blob([base64ToBuf(b64)], { type: "audio/webm" });
       if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
       recBlobUrls[id] = URL.createObjectURL(blob);
@@ -280,46 +311,107 @@
     } catch(e) { return false; }
   }
 
-  function clearStorage(id) {
-    localStorage.removeItem(LS_PREFIX + id);
+  // カスタムラベル保存・復元
+  function saveCustomLabel(id, label) {
+    localStorage.setItem(LS_LABEL_PREFIX + id, label);
+    // CALL_DEFS のラベルも更新
+    const def = CALL_DEFS.find(d => d.id === id);
+    if (def) { def.label = label; def.display = label; def.ttsWords = [label]; }
+  }
+
+  function loadCustomLabels() {
+    CUSTOM_DEFS.forEach(def => {
+      const saved = localStorage.getItem(LS_LABEL_PREFIX + def.id);
+      if (saved) {
+        def.label = saved; def.display = saved; def.ttsWords = [saved];
+        // 入力欄に反映
+        const inp = document.getElementById(`labelInput-${def.id}`);
+        if (inp) inp.value = saved;
+      }
+    });
   }
 
   // ============================================================
   //  録音UI構築
   // ============================================================
+  function buildRecRow(def, container) {
+    const row = document.createElement("div");
+    row.className = "rec-row";
+    row.id = `row-${def.id}`;
+
+    const labelHtml = def.isCustom
+      ? `<input class="rec-label-input" id="labelInput-${def.id}"
+           placeholder="名前を入力（例：右ハイキック！）"
+           value="${def.label.startsWith('カスタム') ? '' : def.label}"
+           oninput="onLabelInput('${def.id}', this.value)">`
+      : `<span class="rec-label">${def.label}</span>`;
+
+    row.innerHTML = `
+      <div class="rec-top">
+        ${labelHtml}
+        <span class="rec-status">✅ 録音済み</span>
+      </div>
+      <div class="rec-btns">
+        <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
+        <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
+      </div>
+      <div class="waveform" id="wave-${def.id}" style="margin-top:8px;display:none">
+        <canvas class="wave-canvas" id="canvas-${def.id}" height="36"></canvas>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
   function buildRecUI() {
-    const list = document.getElementById("recList");
-    list.innerHTML = "";
-    CALL_DEFS.forEach(def => {
-      const row = document.createElement("div");
-      row.className = "rec-row";
-      row.id = `row-${def.id}`;
-      row.innerHTML = `
-        <div class="rec-top">
-          <span class="rec-label">${def.label}</span>
-          <span class="rec-status">✅ 録音済み</span>
-        </div>
-        <div class="rec-btns">
-          <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
-          <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
-        </div>
-        <div class="waveform" id="wave-${def.id}" style="margin-top:8px;display:none">
-          <canvas class="wave-canvas" id="canvas-${def.id}" height="36"></canvas>
-        </div>
-      `;
-      list.appendChild(row);
-    });
+    const baseContainer   = document.getElementById("recListBase");
+    const customContainer = document.getElementById("recListCustom");
+    BASE_DEFS.forEach(def   => buildRecRow(def, baseContainer));
+    CUSTOM_DEFS.forEach(def => buildRecRow(def, customContainer));
   }
   buildRecUI();
 
-  // ページ読み込み時にlocalStorageから復元
+  // ============================================================
+  //  カスタムモードボタン構築
+  // ============================================================
+  function buildCustomModeButtons() {
+    const container = document.getElementById("customModes");
+    container.innerHTML = "";
+    CUSTOM_DEFS.forEach(def => {
+      const btn = document.createElement("button");
+      btn.className = "mode-btn custom-empty";
+      btn.dataset.mode = def.id;
+      btn.onclick = () => selectMode(btn);
+      btn.id = `modeBtn-${def.id}`;
+      btn.innerHTML = `<span id="modeName-${def.id}">${def.label}</span><br>
+        <small>2分間</small><br>
+        <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>`;
+      container.appendChild(btn);
+    });
+  }
+  buildCustomModeButtons();
+
+  // ============================================================
+  //  ラベル入力ハンドラ
+  // ============================================================
+  function onLabelInput(id, value) {
+    const trimmed = value.trim() || `カスタム${id.replace('custom','')}`;
+    saveCustomLabel(id, trimmed);
+    // モードボタンのラベル更新
+    const nameEl = document.getElementById(`modeName-${id}`);
+    if (nameEl) nameEl.textContent = trimmed;
+    updateModeButtons();
+  }
+
+  // ============================================================
+  //  ページ読み込み時復元
+  // ============================================================
   async function restoreAllFromStorage() {
+    loadCustomLabels(); // ラベルを先に復元
     for (const def of CALL_DEFS) {
       const ok = await loadFromStorage(def.id);
-      if (ok) onRecordDone(def.id, true); // silent=true で再保存しない
+      if (ok) onRecordDone(def.id, true);
     }
   }
-  // AudioContext はユーザー操作後に作るため、最初のクリックで復元
   let restored = false;
   async function ensureRestored() {
     if (restored) return;
@@ -343,12 +435,9 @@
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
       mediaRecorder.onstop = async () => {
         const blob = new Blob(recChunks, { type: "audio/webm" });
-        // localStorageに保存
         await saveToStorage(id, blob);
-        // 波形用 AudioBuffer
         const arrayBuf = await blob.arrayBuffer();
         recBuffers[id] = await ctx.decodeAudioData(arrayBuf);
-        // 再生用 BlobURL（ピッチ保持用）
         if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
         recBlobUrls[id] = URL.createObjectURL(blob);
         stream.getTracks().forEach(t => t.stop());
@@ -408,27 +497,27 @@
     if (!recBlobUrls[id]) return;
     const audio = new Audio(recBlobUrls[id]);
     audio.playbackRate = speechRate;
-    audio.preservesPitch = true;          // Chrome/Edge/Safari
-    audio.mozPreservesPitch = true;       // Firefox
-    audio.webkitPreservesPitch = true;    // 古いSafari
+    audio.preservesPitch = true;
+    audio.mozPreservesPitch = true;
+    audio.webkitPreservesPitch = true;
     audio.volume = 1.0;
     audio.play();
   }
 
   function updateVoiceBadge() {
-    const done  = CALL_DEFS.filter(d => recBlobUrls[d.id]).length;
-    const badge = document.getElementById("voiceBadge");
+    const allIds = CALL_DEFS.map(d => d.id);
+    const done   = allIds.filter(id => recBlobUrls[id]).length;
+    const badge  = document.getElementById("voiceBadge");
     if (done === 0) {
       badge.innerHTML = "声: AIの声"; badge.style.color = "#555";
-    } else if (done === CALL_DEFS.length) {
-      badge.innerHTML = "声: <span>自分の声（全コール録音済み）✅</span>";
     } else {
-      badge.innerHTML = `声: <span>自分の声（${done}/${CALL_DEFS.length} 録音済み）</span> ＋ AIの声`;
+      badge.innerHTML = `声: <span>自分の声（${done}コール録音済み）</span>`;
     }
   }
 
   function updateModeButtons() {
-    document.querySelectorAll(".mode-btn").forEach(btn => {
+    // 基本モードボタン
+    document.querySelectorAll("#baseModes .mode-btn").forEach(btn => {
       const mode    = btn.dataset.mode;
       const ids     = MODE_REC_IDS[mode] || [];
       const done    = ids.filter(id => recBlobUrls[id]).length;
@@ -438,6 +527,23 @@
       if (mark) {
         mark.textContent = allDone ? "🎙 録音済" : done > 0 ? `🎙 ${done}/${ids.length}` : "⚪ 未録音";
       }
+    });
+
+    // カスタムモードボタン
+    CUSTOM_DEFS.forEach(def => {
+      const btn    = document.getElementById(`modeBtn-${def.id}`);
+      const mark   = document.getElementById(`mark-${def.id}`);
+      const nameEl = document.getElementById(`modeName-${def.id}`);
+      if (!btn) return;
+      const hasRec   = !!recBlobUrls[def.id];
+      const hasLabel = !def.label.startsWith('カスタム');
+      // 名前が設定されているかlocalStorageにあるか
+      const savedLabel = localStorage.getItem(LS_LABEL_PREFIX + def.id);
+      const isNamed    = savedLabel && savedLabel.trim().length > 0;
+      btn.classList.toggle("custom-empty", !isNamed && !hasRec);
+      btn.classList.toggle("has-rec", hasRec);
+      if (nameEl) nameEl.textContent = isNamed ? savedLabel : def.label;
+      if (mark)   mark.textContent   = hasRec ? "🎙 録音済" : "⚪ 未録音";
     });
   }
 
@@ -501,7 +607,7 @@
   // ============================================================
   //  話す速さコントロール
   // ============================================================
-  let speechRate = 1.0;  // TTS rate / 録音 playbackRate 共通
+  let speechRate = 1.0;
 
   function setSpeechRate(rate, label) {
     speechRate = rate;
@@ -521,12 +627,22 @@
   let timeLeft      = 0;
   const DURATION    = 2 * 60;
   let running       = false;
+  let shuffleQueue  = [];
 
-  // シャッフルキュー（ランダムモード用：全コールを均等に回す）
-  let shuffleQueue = [];
+  function getCallList(mode) {
+    // カスタムモードの場合はそのIDのみ
+    if (CUSTOM_IDS.includes(mode)) return [mode];
+    if (mode === "random") {
+      // 基本コール＋録音済みカスタムコールを全部ランダムに
+      const base    = ["wantwo","wantwo","combo","migi","hidari","maegeri","upper"];
+      const customs = CUSTOM_IDS.filter(id => recBlobUrls[id]);
+      return [...base, ...customs];
+    }
+    return MODES[mode] || [mode];
+  }
+
   function nextFromQueue(list) {
     if (shuffleQueue.length === 0) {
-      // リストをコピーしてシャッフル
       shuffleQueue = [...list].sort(() => Math.random() - 0.5);
     }
     return shuffleQueue.shift();
@@ -537,7 +653,7 @@
     document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     selectedMode = btn.dataset.mode;
-    shuffleQueue = []; // モード変更時はキューリセット
+    shuffleQueue = [];
   }
 
   function formatTime(sec) {
@@ -547,16 +663,15 @@
 
   async function scheduleNextCall() {
     if (!running) return;
-    const list = MODES[selectedMode];
-    // randomモードはシャッフルキューで均等に、それ以外は純粋ランダム
-    const id = selectedMode === "random"
+    const list = getCallList(selectedMode);
+    const id   = selectedMode === "random"
       ? nextFromQueue(list)
       : list[Math.floor(Math.random() * list.length)];
     const def  = CALL_DEFS.find(d => d.id === id);
     document.getElementById("currentCall").textContent = def ? def.display : id;
     await playCallId(id);
     if (!running) return;
-    callTimeout = setTimeout(scheduleNextCall, 300); // 発声後0.3秒で次へ
+    callTimeout = setTimeout(scheduleNextCall, 300);
   }
 
   async function startTraining() {
@@ -640,7 +755,6 @@
     sessionStorage.setItem('installDismissed', '1');
   }
 
-  // iOS Safari の検出（インストール済みでない場合のみ案内）
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isInStandalone = window.navigator.standalone === true;
   if (isIos && !isInStandalone && !sessionStorage.getItem('installDismissed')) {
