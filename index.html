@@ -257,7 +257,23 @@
   <!-- ===== 録音タブ ===== -->
   <div id="recSection" style="display:none">
     <p class="rec-title">各コールを<strong>1回だけ</strong>録音してください。<br>録音した声がトレーニング中に自動リピートされます。</p>
-    <div class="rec-section-title">▼ 基本コール</div>
+
+    <div class="rec-section-title">▼ ゴング音</div>
+    <div id="bellRow" class="rec-row" style="border-color:#f0c040">
+      <div class="rec-top">
+        <span class="rec-label" style="color:#f0c040">🔔 ゴング音</span>
+        <span class="rec-status" id="bellStatus"></span>
+      </div>
+      <p style="font-size:0.78rem;color:#aaa;margin-bottom:8px">録音した音がラウンド開始・終了時に鳴ります。未録音の場合は自動生成音が使われます。</p>
+      <div class="rec-btns">
+        <button class="rec-btn record" id="recBtn-bell" onclick="toggleRecord('bell')">🎙 録音開始</button>
+        <button class="rec-btn play"   id="playBtn-bell" onclick="playRec('bell')" disabled>▶ 確認</button>
+        <button class="rec-btn" style="background:#333;color:#aaa" onclick="clearBell()">🗑 削除</button>
+      </div>
+      <div class="waveform" id="wave-bell"><canvas class="wave-canvas" id="canvas-bell" height="32"></canvas></div>
+    </div>
+
+    <div class="rec-section-title" style="margin-top:16px">▼ 基本コール</div>
     <div class="rec-list" id="recListBase"></div>
     <div class="rec-section-title" style="margin-top:16px">▼ カスタムコール（名前をつけて自由に録音）</div>
     <div class="rec-list" id="recListCustom"></div>
@@ -323,8 +339,15 @@
     return audioCtx;
   }
 
-  // ゴング音（1回打ち・ボクシングベル風）
+  // ゴング音（録音済みなら優先、なければ自動生成）
   function playBell() {
+    if (recBlobUrls["bell"]) {
+      const a = new Audio(recBlobUrls["bell"]);
+      a.volume = 1.0; a.play(); return;
+    }
+    playBellSynth();
+  }
+  function playBellSynth() {
     try {
       const ctx = getCtx();
       const now = ctx.currentTime;
@@ -532,6 +555,9 @@
   // 復元
   async function restoreAllFromStorage(){
     loadCustomLabels(); loadAllDelays(); loadRandSettings();
+    // ゴング音を復元
+    const bellOk=await loadFromStorage("bell");
+    if(bellOk) onRecordDone("bell",true);
     for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
   }
   let restored=false;
@@ -571,8 +597,30 @@
     const pb=document.getElementById(`playBtn-${id}`);
     if(rb){rb.textContent="🔄 録り直し";rb.classList.remove("recording");}
     if(pb) pb.disabled=false;
+    if(id==="bell"){
+      const row=document.getElementById("bellRow");
+      if(row) row.style.borderColor="#2ecc71";
+      const st=document.getElementById("bellStatus");
+      if(st){st.textContent="✅ 録音済み";st.style.display="inline";}
+      drawWaveform("bell"); return;
+    }
     const row=document.getElementById(`row-${id}`); if(row) row.classList.add("done");
     drawWaveform(id); updateVoiceBadge(); updateModeButtons();
+  }
+
+  function clearBell(){
+    localStorage.removeItem(LP+"bell");
+    if(recBlobUrls["bell"]){URL.revokeObjectURL(recBlobUrls["bell"]);delete recBlobUrls["bell"];}
+    delete recBuffers["bell"];
+    document.getElementById("bellRow").style.borderColor="#f0c040";
+    const st=document.getElementById("bellStatus");
+    if(st){st.textContent="";st.style.display="none";}
+    const pb=document.getElementById("playBtn-bell");
+    if(pb) pb.disabled=true;
+    const rb=document.getElementById("recBtn-bell");
+    if(rb) rb.textContent="🎙 録音開始";
+    const wrap=document.getElementById("wave-bell");
+    if(wrap) wrap.style.display="none";
   }
   function drawWaveform(id){
     const buf=recBuffers[id]; if(!buf) return;
