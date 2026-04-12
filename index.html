@@ -241,8 +241,8 @@
     </div>
     <div class="status" id="status">モードを選んでスタートを押してください</div>
 
-    <!-- 基本モード -->
-    <p class="section-title">基本モード</p>
+    <!-- 繰り返しモード（基本＋カスタム） -->
+    <p class="section-title">🔁 繰り返しモード</p>
     <div class="modes" id="baseModes">
       <button class="mode-btn active" data-mode="random" onclick="selectMode(this)">
         ✅ 選択した<br>項目を<br>ランダム
@@ -285,9 +285,17 @@
       </button>
     </div>
 
-    <!-- カスタムモード -->
-    <p class="section-title" style="margin-top:4px">カスタムモード</p>
+    <!-- カスタム（繰り返しモード内） -->
     <div class="modes" id="customModes"></div>
+
+    <!-- 単発モード -->
+    <p class="section-title" style="margin-top:10px">⚡ 単発モード</p>
+    <div style="margin-bottom:10px">
+      <button class="mode-btn" data-mode="single" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
+        ⚡ 単発モード<br>
+        <span style="font-size:0.75rem;color:#f0c040">選択した項目を各1回だけ再生（繰り返しなし）</span>
+      </button>
+    </div>
 
     <!-- ゴングのみモード（一番下） -->
     <div style="margin-bottom:10px">
@@ -883,6 +891,18 @@
   let timeLeft=0, running=false;
   let currentRound=1, isResting=false;
   let shuffleQueue=[];
+  let singleQueue=[];  // 単発モード用（1ラウンドで各項目1回だけ）
+
+  function getSingleList(){
+    let list=[];
+    if(randEnabled["wantwo"]!==false)  list.push("wantwo");
+    if(randEnabled["combo"]!==false)   list.push("combo");
+    if(randEnabled["middle"]!==false)  list.push("migi","hidari");
+    if(randEnabled["maegeri"]!==false) list.push("maegeri");
+    if(randEnabled["upper"]!==false)   list.push("upper");
+    CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
+    return list.length>0?list:["wantwo"];
+  }
 
   function formatTime(sec){const m=Math.floor(sec/60),s=sec%60;return`${m}:${s.toString().padStart(2,"0")}`;}
 
@@ -934,8 +954,17 @@
 
   async function scheduleNextCall(){
     if(!running||isResting) return;
-    const list=getCallList(selectedMode);
-    const id=selectedMode==="random"?nextFromQueue(list):list[Math.floor(Math.random()*list.length)];
+    let id;
+    if(selectedMode==="single"){
+      if(singleQueue.length===0){
+        document.getElementById("status").textContent="全コール完了！ラウンド終了まで待機中...";
+        return; // 全部使い終わったらそこで止める
+      }
+      id=singleQueue.shift();
+    } else {
+      const list=getCallList(selectedMode);
+      id=selectedMode==="random"?nextFromQueue(list):list[Math.floor(Math.random()*list.length)];
+    }
     const def=CALL_DEFS.find(d=>d.id===id);
     document.getElementById("currentCall").textContent=def?def.display:id;
     vibrate([80]);
@@ -957,6 +986,10 @@
     timeLeft=getWorkSec();
     updateRoundLabel();
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
+    // 単発モード：ラウンドごとにキューをリセット＆シャッフル
+    if(selectedMode==="single"){
+      singleQueue=[...getSingleList()].sort(()=>Math.random()-0.5);
+    }
     if(selectedMode==="gong-only"){
       const gm=Math.floor(gongIntervalSec/60), gs=gongIntervalSec%60;
       const gLabel=gm>0?(gs>0?`${gm}分${gs}秒`:`${gm}分`):`${gs}秒`;
