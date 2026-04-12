@@ -339,13 +339,26 @@
     return audioCtx;
   }
 
-  // ゴング音（録音済みなら優先、なければ自動生成）
+  // 開始ゴング（録音済み→gong.mp3→自動生成）
   function playBell() {
-    if (recBlobUrls["bell"]) {
-      const a = new Audio(recBlobUrls["bell"]);
-      a.volume = 1.0; a.play(); return;
-    }
-    playBellSynth();
+    return new Promise(resolve => {
+      const src = recBlobUrls["bell"] ? recBlobUrls["bell"] : "./gong.mp3";
+      const a = new Audio(src);
+      a.volume = 1.0;
+      a.onended = () => resolve();
+      a.onerror = () => { playBellSynth(); resolve(); };
+      a.play().catch(() => { playBellSynth(); resolve(); });
+    });
+  }
+  // 終了ゴング（gong-end.mp3→自動生成）
+  function playEndBell() {
+    return new Promise(resolve => {
+      const a = new Audio("./gong-end.mp3");
+      a.volume = 1.0;
+      a.onended = () => resolve();
+      a.onerror = () => { playBellSynth(); resolve(); };
+      a.play().catch(() => { playBellSynth(); resolve(); });
+    });
   }
   function playBellSynth() {
     try {
@@ -829,8 +842,8 @@
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
     document.getElementById("currentCall").textContent="スタート！";
     document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
-    playBell(); vibrate([300]);
     await playRoundAnnouncement(currentRound);
+    await playBell(); vibrate([300]);
     callTimeout=setTimeout(scheduleNextCall,600);
     timerInterval=setInterval(()=>{
       timeLeft--;
@@ -842,15 +855,14 @@
   async function onRoundEnd(){
     clearTimeout(callTimeout); synth.cancel();
     saveRound(); // 履歴に記録
-    playBell(); vibrate([400]);
+    await playEndBell(); vibrate([400]);
     const totalRounds=getRounds();
     if(currentRound>=totalRounds){
-      // 全ラウンド終了
+      // 全ラウンド終了（声なし・ゴングのみ）
       isResting=false;
       document.getElementById("roundLabel").textContent="全ラウンド終了！";
       document.getElementById("currentCall").textContent="🎉 お疲れ様！";
       document.getElementById("status").textContent=`${totalRounds}ラウンド完了！お疲れ様でした！`;
-      await playTTS(["終了。お疲れ様でした。"]);
       finishTraining();
     } else {
       // 休憩
