@@ -1028,6 +1028,7 @@
 
 
   async function onRoundEnd(){
+    isResting=true; // 並行中のscheduleNextCallをすぐ止める
     clearTimeout(callTimeout); synth.cancel();
     if(!running) return;
     saveRound(); // 履歴に記録
@@ -1074,6 +1075,7 @@
 
   async function startTraining(){
     if(running) return;
+    await ensureRestored(); // 録音データを確実に読み込んでからスタート
     if(audioCtx&&audioCtx.state==="suspended") await audioCtx.resume();
     running=true; currentRound=1; shuffleQueue=[];
     document.getElementById("startBtn").disabled=true;
