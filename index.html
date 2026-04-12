@@ -223,10 +223,6 @@
           <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
         </label>
       </button>
-      <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)">
-        🔔 ゴングのみ<br><span style="font-size:0.72rem;color:#f0c040">間隔タイマー</span>
-        <span class="rec-mark"></span>
-      </button>
     </div>
 
     <!-- ゴング間隔設定（ゴングのみモード選択時に表示） -->
@@ -243,6 +239,13 @@
     <!-- カスタムモード -->
     <p class="section-title" style="margin-top:4px">カスタムモード</p>
     <div class="modes" id="customModes"></div>
+
+    <!-- ゴングのみモード -->
+    <div style="margin-bottom:10px">
+      <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
+        🔔 ゴングのみ<br><span style="font-size:0.75rem;color:#f0c040">声なし・ゴング音だけ</span>
+      </button>
+    </div>
 
     <!-- 設定ボックス -->
     <div class="settings-box">
@@ -380,17 +383,14 @@
       audio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
-  // 終了ゴング（プリロードして確実に再生）
-  const endBellAudio = new Audio("./gong-end.mp3");
-  endBellAudio.preload = "auto";
-
+  // 終了ゴング（毎回タイムスタンプURLでSWキャッシュを完全にバイパス）
   function playEndBell() {
     return new Promise(resolve => {
-      endBellAudio.currentTime = 0;
-      endBellAudio.volume = 1.0;
-      endBellAudio.onended = () => resolve();
-      endBellAudio.onerror = () => { playBellSynth(); resolve(); };
-      endBellAudio.play().catch(() => { playBellSynth(); resolve(); });
+      const audio = new Audio("./gong-end.mp3?_=" + Date.now());
+      audio.volume = 1.0;
+      audio.onended = () => resolve();
+      audio.onerror = () => { playBellSynth(); resolve(); };
+      audio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
   function playBellSynth() {
