@@ -51,6 +51,12 @@
     .rec-label-input::placeholder { color: #444; font-weight: normal; }
     .rec-status { font-size: 0.78rem; color: #2ecc71; display: none; }
     .rec-row.done .rec-status { display: inline; }
+    /* 間隔コントロール */
+    .delay-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.82rem; color: #aaa; }
+    .delay-row span { white-space: nowrap; }
+    .delay-val { color: #f0c040; font-weight: bold; min-width: 28px; text-align: center; display: inline-block; }
+    .delay-btn { background: #0f3460; border: none; color: #7ec8e3; width: 28px; height: 28px; border-radius: 6px; font-size: 1rem; cursor: pointer; line-height: 1; }
+    .delay-btn:hover { background: #1a5276; }
     .rec-btns { display: flex; gap: 8px; }
     .rec-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
     .rec-btn.record { background: #e94560; color: #fff; }
@@ -311,6 +317,32 @@
     } catch(e) { return false; }
   }
 
+  // ============================================================
+  //  間隔（秒）保存・復元
+  // ============================================================
+  const LS_DELAY_PREFIX = "kick_delay_";
+  const callDelays = {}; // id -> 秒数
+
+  function changeDelay(id, delta) {
+    const current = callDelays[id] || 0;
+    const next    = Math.max(0, Math.min(15, current + delta));
+    callDelays[id] = next;
+    localStorage.setItem(LS_DELAY_PREFIX + id, next);
+    const el = document.getElementById(`delayVal-${id}`);
+    if (el) el.textContent = `${next}秒`;
+  }
+
+  function loadAllDelays() {
+    CALL_DEFS.forEach(def => {
+      const saved = localStorage.getItem(LS_DELAY_PREFIX + def.id);
+      if (saved !== null) {
+        callDelays[def.id] = parseInt(saved, 10);
+        const el = document.getElementById(`delayVal-${def.id}`);
+        if (el) el.textContent = `${callDelays[def.id]}秒`;
+      }
+    });
+  }
+
   // カスタムラベル保存・復元
   function saveCustomLabel(id, label) {
     localStorage.setItem(LS_LABEL_PREFIX + id, label);
@@ -354,6 +386,13 @@
       <div class="rec-btns">
         <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
         <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
+      </div>
+      <div class="delay-row">
+        <span>次まで間隔：</span>
+        <button class="delay-btn" onclick="changeDelay('${def.id}', -1)">－</button>
+        <span class="delay-val" id="delayVal-${def.id}">0秒</span>
+        <button class="delay-btn" onclick="changeDelay('${def.id}', +1)">＋</button>
+        <span style="color:#555; font-size:0.75rem;">（0秒＝即座に次へ）</span>
       </div>
       <div class="waveform" id="wave-${def.id}" style="margin-top:8px;display:none">
         <canvas class="wave-canvas" id="canvas-${def.id}" height="36"></canvas>
@@ -407,6 +446,7 @@
   // ============================================================
   async function restoreAllFromStorage() {
     loadCustomLabels(); // ラベルを先に復元
+    loadAllDelays();    // 間隔を復元
     for (const def of CALL_DEFS) {
       const ok = await loadFromStorage(def.id);
       if (ok) onRecordDone(def.id, true);
@@ -671,7 +711,8 @@
     document.getElementById("currentCall").textContent = def ? def.display : id;
     await playCallId(id);
     if (!running) return;
-    callTimeout = setTimeout(scheduleNextCall, 300);
+    const delaySec = callDelays[id] || 0;
+    callTimeout = setTimeout(scheduleNextCall, 300 + delaySec * 1000);
   }
 
   async function startTraining() {
