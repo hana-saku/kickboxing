@@ -323,20 +323,23 @@
     return audioCtx;
   }
 
-  // ベル音
+  // ゴング音（1回打ち・ボクシングベル風）
   function playBell() {
     try {
-      const ctx  = getCtx();
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.8);
-      gain.gain.setValueAtTime(1.0, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 1.8);
+      const ctx = getCtx();
+      const now = ctx.currentTime;
+      const dur = 4.5;
+      // 基音＋倍音を重ねてゴングらしい余韻を作る
+      [[220,1.0],[440,0.55],[660,0.28],[880,0.12]].forEach(([freq,vol])=>{
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur * (vol + 0.15));
+        osc.start(now); osc.stop(now + dur);
+      });
     } catch(e){}
   }
 
@@ -660,6 +663,25 @@
   }
 
   // ============================================================
+  //  ラウンドアナウンス（英語）
+  // ============================================================
+  const ROUND_NAMES = ["One","Two","Three","Four","Five","Six","Seven","Eight",
+    "Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen",
+    "Sixteen","Seventeen","Eighteen","Nineteen","Twenty"];
+
+  function playRoundAnnouncement(roundNum) {
+    return new Promise(resolve => {
+      const name = ROUND_NAMES[roundNum - 1] || String(roundNum);
+      const u = new SpeechSynthesisUtterance(`Round ${name}`);
+      u.lang = "en-US"; u.rate = 0.88; u.pitch = 1.0; u.volume = 1.0;
+      const enVoice = voices.find(v=>v.lang==="en-US") || voices.find(v=>v.lang.startsWith("en"));
+      if (enVoice) u.voice = enVoice;
+      u.onend = ()=>resolve(); u.onerror = ()=>resolve();
+      synth.cancel(); synth.speak(u);
+    });
+  }
+
+  // ============================================================
   //  速さ
   // ============================================================
   let speechRate=1.0;
@@ -759,8 +781,8 @@
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
     document.getElementById("currentCall").textContent="スタート！";
     document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
-    playBell(); vibrate([200,100,200]);
-    await playTTS([`ラウンド${currentRound}`]);
+    playBell(); vibrate([300]);
+    await playRoundAnnouncement(currentRound);
     callTimeout=setTimeout(scheduleNextCall,600);
     timerInterval=setInterval(()=>{
       timeLeft--;
@@ -772,7 +794,7 @@
   async function onRoundEnd(){
     clearTimeout(callTimeout); synth.cancel();
     saveRound(); // 履歴に記録
-    playBell(); vibrate([300,100,300,100,300]);
+    playBell(); vibrate([400]);
     const totalRounds=getRounds();
     if(currentRound>=totalRounds){
       // 全ラウンド終了
