@@ -794,8 +794,11 @@
   }
   let currentCallAudio = null;    // 再生中の録音音声
   let currentCallPromise = null;  // 再生中の声のPromise
+  let callLock = false;           // 同時再生防止ロック
 
   function stopCurrentCall(){
+    callLock=false;
+    currentCallPromise=null;
     if(currentCallAudio){
       currentCallAudio.pause();
       currentCallAudio.currentTime=0;
@@ -819,7 +822,7 @@
         const def=CALL_DEFS.find(d=>d.id===id);
         const words=def?def.ttsWords:[id];
         synth.cancel();
-        words.forEach((w,i)=>{const u=makeUtter(w);if(i===words.length-1)u.onend=u.onerror=()=>resolve();synth.speak(u);});
+        words.forEach((w,i)=>{const u=makeUtter(w);if(i===words.length-1)u.onend=u.onerror=()=>setTimeout(resolve,150);synth.speak(u);});
       }
     });
   }
@@ -979,12 +982,13 @@
   }
 
   async function scheduleNextCall(){
-    if(!running||isResting) return;
+    if(!running||isResting||callLock) return;
+    callLock=true;
     let id;
     if(selectedMode==="single"){
       if(singleQueue.length===0){
         document.getElementById("status").textContent="全コール完了！ラウンド終了まで待機中...";
-        return; // 全部使い終わったらそこで止める
+        callLock=false; return;
       }
       id=singleQueue.shift();
     } else {
@@ -994,9 +998,10 @@
     const def=CALL_DEFS.find(d=>d.id===id);
     document.getElementById("currentCall").textContent=def?def.display:id;
     vibrate([80]);
-    currentCallPromise = playCallId(id);
+    currentCallPromise=playCallId(id);
     await currentCallPromise;
-    currentCallPromise = null;
+    currentCallPromise=null;
+    callLock=false;
     if(!running||isResting) return;
     const delay=(callDelays[id]||0)*1000;
     callTimeout=setTimeout(scheduleNextCall,300+delay);
@@ -1011,6 +1016,8 @@
 
   async function startRound(){
     isResting=false;
+    callLock=false;   // 新ラウンド開始時にロック解除
+    synth.cancel();   // インターバル中の残留TTSをクリア
     timeLeft=getWorkSec();
     updateRoundLabel();
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
