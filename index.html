@@ -129,6 +129,18 @@
     .hist-clear-btn { background: none; border: 1px solid #333; color: #555; padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
     .hist-clear-btn:hover { border-color: #e94560; color: #e94560; }
 
+    /* ゴング間隔 */
+    .gong-interval-box { margin-bottom: 14px; background: #16213e; border: 1px solid #f0c040; border-radius: 14px; padding: 14px 16px; display: none; }
+    .gong-interval-box.visible { display: block; }
+    .gong-interval-title { font-size: 0.78rem; color: #f0c040; margin-bottom: 10px; letter-spacing: 1px; }
+    .gong-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .gong-preset-btn { padding: 8px 14px; border-radius: 8px; border: 2px solid #0f3460; background: #0d1b2a; color: #ccc; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .gong-preset-btn:hover { border-color: #f0c040; color: #f0c040; }
+    .gong-preset-btn.active { border-color: #f0c040; background: #f0c040; color: #1a1a2e; }
+    .gong-custom-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #aaa; }
+    .gong-custom-input { width: 60px; background: #0d1b2a; border: 2px solid #0f3460; border-radius: 8px; color: #f0c040; font-size: 1.1rem; font-weight: bold; text-align: center; padding: 5px 2px; outline: none; }
+    .gong-custom-input:focus { border-color: #f0c040; }
+
     /* インストールバナー */
     #installBanner {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -211,6 +223,31 @@
           <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
         </label>
       </button>
+    </div>
+
+      <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)">
+        🔔 ゴングのみ<br><span style="font-size:0.72rem;color:#f0c040">間隔タイマー</span>
+        <span class="rec-mark"></span>
+      </button>
+    </div>
+
+    <!-- ゴング間隔設定（ゴングのみモード選択時に表示） -->
+    <div class="gong-interval-box" id="gongIntervalBox">
+      <div class="gong-interval-title">🔔 ゴングを鳴らす間隔</div>
+      <div class="gong-presets">
+        <button class="gong-preset-btn" onclick="setGongInterval(10)">10秒</button>
+        <button class="gong-preset-btn" onclick="setGongInterval(20)">20秒</button>
+        <button class="gong-preset-btn active" id="gongPreset-30" onclick="setGongInterval(30)">30秒</button>
+        <button class="gong-preset-btn" onclick="setGongInterval(45)">45秒</button>
+        <button class="gong-preset-btn" onclick="setGongInterval(60)">1分</button>
+        <button class="gong-preset-btn" onclick="setGongInterval(120)">2分</button>
+      </div>
+      <div class="gong-custom-row">
+        <span>カスタム：</span>
+        <input class="gong-custom-input" id="gongCustomInput" type="number" min="1" max="999" placeholder="秒"
+          oninput="setGongIntervalCustom(this.value)">
+        <span>秒ごとに鳴らす</span>
+      </div>
     </div>
 
     <!-- カスタムモード -->
@@ -810,10 +847,35 @@
     if(shuffleQueue.length===0) shuffleQueue=[...list].sort(()=>Math.random()-0.5);
     return shuffleQueue.shift();
   }
+  // ゴング間隔設定
+  let gongIntervalSec = parseInt(localStorage.getItem("kick_gong_interval")||"30",10);
+
+  function setGongInterval(sec){
+    gongIntervalSec = sec;
+    localStorage.setItem("kick_gong_interval", sec);
+    document.querySelectorAll(".gong-preset-btn").forEach(b=>b.classList.remove("active"));
+    const presetMap={10:"10",20:"20",30:"30",45:"45",60:"60",120:"120"};
+    // プリセットボタンのアクティブ化
+    document.querySelectorAll(".gong-preset-btn").forEach(b=>{
+      if(parseInt(b.textContent)===sec||(sec===60&&b.textContent==="1分")||(sec===120&&b.textContent==="2分")) b.classList.add("active");
+    });
+    const ci=document.getElementById("gongCustomInput");
+    if(ci) ci.value="";
+  }
+  function setGongIntervalCustom(val){
+    const n=Math.max(1,parseInt(val,10)||30);
+    gongIntervalSec=n;
+    localStorage.setItem("kick_gong_interval",n);
+    document.querySelectorAll(".gong-preset-btn").forEach(b=>b.classList.remove("active"));
+  }
+
   function selectMode(btn){
     if(running) return;
     document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active"); selectedMode=btn.dataset.mode; shuffleQueue=[];
+    // ゴングのみモード時に間隔設定を表示
+    const box=document.getElementById("gongIntervalBox");
+    if(box) box.classList.toggle("visible", selectedMode==="gong-only");
   }
 
   function updateRoundLabel(){
@@ -835,22 +897,37 @@
     callTimeout=setTimeout(scheduleNextCall,300+delay);
   }
 
+  async function scheduleGongOnly(){
+    if(!running||isResting) return;
+    await playBell(); vibrate([200]);
+    if(!running) return;
+    callTimeout=setTimeout(scheduleGongOnly, gongIntervalSec*1000);
+  }
+
   async function startRound(){
     isResting=false;
     timeLeft=getWorkMin()*60;
     updateRoundLabel();
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
-    document.getElementById("currentCall").textContent="スタート！";
-    document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
-    await playRoundAnnouncement(currentRound);
-    await playBell(); vibrate([300]);
-    callTimeout=setTimeout(scheduleNextCall,600);
+    if(selectedMode==="gong-only"){
+      document.getElementById("currentCall").textContent="🔔";
+      document.getElementById("status").textContent=`${gongIntervalSec}秒ごとにゴングが鳴ります`;
+      await playBell(); vibrate([300]);
+      callTimeout=setTimeout(scheduleGongOnly, gongIntervalSec*1000);
+    } else {
+      document.getElementById("currentCall").textContent="スタート！";
+      document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
+      await playRoundAnnouncement(currentRound);
+      await playBell(); vibrate([300]);
+      callTimeout=setTimeout(scheduleNextCall,600);
+    }
     timerInterval=setInterval(()=>{
       timeLeft--;
       document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
       if(timeLeft<=0){clearInterval(timerInterval);onRoundEnd();}
     },1000);
   }
+
 
   async function onRoundEnd(){
     clearTimeout(callTimeout); synth.cancel();
