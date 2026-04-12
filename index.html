@@ -296,6 +296,7 @@
         <span style="font-size:0.75rem;color:#f0c040">選択した項目を各1回だけ再生（繰り返しなし）</span>
       </button>
     </div>
+    <div class="modes" id="singleCustomModes"></div>
 
     <!-- ゴングのみモード（一番下） -->
     <div style="margin-bottom:10px">
@@ -338,8 +339,10 @@
 
     <div class="rec-section-title" style="margin-top:16px">▼ 基本コール</div>
     <div class="rec-list" id="recListBase"></div>
-    <div class="rec-section-title" style="margin-top:16px">▼ カスタムコール（名前をつけて自由に録音）</div>
+    <div class="rec-section-title" style="margin-top:16px">▼ カスタムコール（繰り返しモード用）</div>
     <div class="rec-list" id="recListCustom"></div>
+    <div class="rec-section-title" style="margin-top:16px">▼ 単発カスタムコール（単発モード用・各1回再生）</div>
+    <div class="rec-list" id="recListSingle"></div>
   </div>
 
   <!-- ===== 履歴タブ ===== -->
@@ -381,7 +384,12 @@
   const CUSTOM_DEFS  = CUSTOM_IDS.map((id,i)=>({
     id, label:`カスタム${i+1}`, display:`カスタム${i+1}`, ttsWords:[`カスタム${i+1}`], isCustom:true
   }));
-  const CALL_DEFS = [...BASE_DEFS, ...CUSTOM_DEFS];
+  const SINGLE_COUNT = 12;
+  const SINGLE_IDS   = Array.from({length:SINGLE_COUNT},(_,i)=>`sc${i+1}`);
+  const SINGLE_DEFS  = SINGLE_IDS.map((id,i)=>({
+    id, label:`単発${i+1}`, display:`単発${i+1}`, ttsWords:[`単発${i+1}`], isSingleCustom:true
+  }));
+  const CALL_DEFS = [...BASE_DEFS, ...CUSTOM_DEFS, ...SINGLE_DEFS];
 
   const MODES = {
     wantwo:["wantwo"], combo:["combo"], middle:["migi","hidari"],
@@ -503,7 +511,7 @@
     if(def){def.label=label;def.display=label;def.ttsWords=[label];}
   }
   function loadCustomLabels(){
-    CUSTOM_DEFS.forEach(def=>{
+    [...CUSTOM_DEFS,...SINGLE_DEFS].forEach(def=>{
       const s=localStorage.getItem(LL+def.id);
       if(s){def.label=s;def.display=s;def.ttsWords=[s];
         const inp=document.getElementById(`labelInput-${def.id}`);
@@ -544,6 +552,12 @@
       if(cb) cb.checked=v; if(lbl) lbl.classList.toggle("checked",v);
     });
     CUSTOM_IDS.forEach(key=>{
+      const v=localStorage.getItem(LR+key)==="1"; randEnabled[key]=v;
+      const cb=document.getElementById(`rand-${key}`);
+      const lbl=document.getElementById(`randLabel-${key}`);
+      if(cb) cb.checked=v; if(lbl) lbl.classList.toggle("checked",v);
+    });
+    SINGLE_IDS.forEach(key=>{
       const v=localStorage.getItem(LR+key)==="1"; randEnabled[key]=v;
       const cb=document.getElementById(`rand-${key}`);
       const lbl=document.getElementById(`randLabel-${key}`);
@@ -612,6 +626,7 @@
   function buildRecUI(){
     BASE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListBase")));
     CUSTOM_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListCustom")));
+    SINGLE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListSingle")));
   }
   buildRecUI();
 
@@ -632,8 +647,25 @@
   }
   buildCustomModeButtons();
 
+  // 単発カスタムモードボタン
+  function buildSingleCustomModeButtons(){
+    const c=document.getElementById("singleCustomModes"); c.innerHTML="";
+    SINGLE_DEFS.forEach(def=>{
+      const btn=document.createElement("button");
+      btn.className="mode-btn custom-empty"; btn.dataset.mode=def.id;
+      btn.onclick=()=>selectMode(btn); btn.id=`modeBtn-${def.id}`;
+      btn.innerHTML=`<span id="modeName-${def.id}">${def.label}</span>
+        <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>
+        <label class="rand-toggle" id="randLabel-${def.id}" onclick="event.stopPropagation()">
+          <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">含める</label>`;
+      c.appendChild(btn);
+    });
+  }
+  buildSingleCustomModeButtons();
+
   function onLabelInput(id,value){
-    const t=value.trim()||`カスタム${id.replace("custom","")}`;
+    let fallback=id.startsWith("sc")?`単発${id.replace("sc","")}`:`カスタム${id.replace("custom","")}`;
+    const t=value.trim()||fallback;
     saveCustomLabel(id,t);
     const el=document.getElementById(`modeName-${id}`); if(el) el.textContent=t;
     updateModeButtons();
@@ -746,7 +778,7 @@
       const mk=document.getElementById(`mark-${mode}`);
       if(mk) mk.textContent=done===ids.length?"🎙 録音済":done>0?`🎙 ${done}/${ids.length}`:"⚪ 未録音";
     });
-    CUSTOM_DEFS.forEach(def=>{
+    [...CUSTOM_DEFS,...SINGLE_DEFS].forEach(def=>{
       const btn=document.getElementById(`modeBtn-${def.id}`);
       const mk=document.getElementById(`mark-${def.id}`);
       const nm=document.getElementById(`modeName-${def.id}`);
@@ -836,7 +868,7 @@
   //  ランダムコールリスト取得
   // ============================================================
   function getCallList(mode){
-    if(CUSTOM_IDS.includes(mode)) return [mode];
+    if(CUSTOM_IDS.includes(mode)||SINGLE_IDS.includes(mode)) return [mode];
     if(mode==="random"){
       let list=[];
       if(randEnabled["wantwo"]!==false)  list.push("wantwo","wantwo");
@@ -901,6 +933,7 @@
     if(randEnabled["maegeri"]!==false) list.push("maegeri");
     if(randEnabled["upper"]!==false)   list.push("upper");
     CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
+    SINGLE_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
     return list.length>0?list:["wantwo"];
   }
 
