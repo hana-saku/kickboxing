@@ -403,6 +403,9 @@
   // 開始ゴング（プリロード）
   const startBellAudio = new Audio("./gong.mp3");
   startBellAudio.preload = "auto";
+  // 終了ゴング（プリロード）
+  const endBellAudio = new Audio("./gong-end.mp3");
+  endBellAudio.preload = "auto";
 
   function playBell() {
     return new Promise(resolve => {
@@ -414,22 +417,14 @@
       audio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
-  // 終了ゴング：fetchでMP3を取得→Web Audio APIで直接デコード再生（SWキャッシュ完全スキップ）
+  // 終了ゴング
   function playEndBell() {
     return new Promise(resolve => {
-      fetch('./gong-end.mp3?nocache=' + Date.now())
-        .then(r => r.arrayBuffer())
-        .then(ab => getCtx().decodeAudioData(ab))
-        .then(buffer => {
-          const ctx = getCtx();
-          if(ctx.state==="suspended") ctx.resume();
-          const src = ctx.createBufferSource();
-          src.buffer = buffer;
-          src.connect(ctx.destination);
-          src.onended = () => resolve();
-          src.start(0);
-        })
-        .catch(() => { playBellSynth(); resolve(); });
+      endBellAudio.currentTime = 0;
+      endBellAudio.volume = 1.0;
+      endBellAudio.onended = () => resolve();
+      endBellAudio.onerror = () => { playBellSynth(); resolve(); };
+      endBellAudio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
   function playBellSynth() {
@@ -1020,8 +1015,10 @@
         await playRoundAnnouncement(currentRound);
       }
       await playBell(); vibrate([300]);
+      if(!running) return;
       callTimeout=setTimeout(scheduleNextCall,600);
     }
+    if(!running) return;
     timerInterval=setInterval(()=>{
       timeLeft--;
       document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
@@ -1032,8 +1029,10 @@
 
   async function onRoundEnd(){
     clearTimeout(callTimeout); synth.cancel();
+    if(!running) return;
     saveRound(); // 履歴に記録
     await playEndBell(); vibrate([400]);
+    if(!running) return; // ストップ押された場合ここで止まる
     const totalRounds=getRounds();
     if(currentRound>=totalRounds){
       // 全ラウンド終了（声なし・ゴングのみ）
