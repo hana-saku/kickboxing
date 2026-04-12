@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>キックボクシング 声だし</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e94560">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="声だし">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a2e;
+      color: #fff;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 6px; color: #e94560; letter-spacing: 2px; }
+
+    /* タブ */
+    .tabs { display: flex; margin: 14px 0 20px; border-radius: 10px; overflow: hidden; border: 2px solid #0f3460; }
+    .tab { padding: 10px 28px; background: #16213e; color: #aaa; font-size: 0.95rem; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+    .tab.active { background: #e94560; color: #fff; }
+
+    /* 録音セクション */
+    #recSection { width: 100%; max-width: 500px; }
+    .rec-title { font-size: 0.9rem; color: #aaa; margin-bottom: 16px; text-align: center; line-height: 1.7; }
+    .rec-list { display: flex; flex-direction: column; gap: 12px; }
+    .rec-row {
+      background: #16213e; border: 2px solid #0f3460;
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .rec-row.done { border-color: #2ecc71; }
+    .rec-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .rec-label { flex: 1; font-size: 1.05rem; font-weight: bold; color: #f0c040; }
+    .rec-status { font-size: 0.78rem; color: #2ecc71; display: none; }
+    .rec-row.done .rec-status { display: inline; }
+    .rec-btns { display: flex; gap: 8px; }
+    .rec-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .rec-btn.record { background: #e94560; color: #fff; }
+    .rec-btn.record:hover { background: #c73652; }
+    .rec-btn.record.recording { background: #ff0040; animation: pulse 0.6s infinite alternate; }
+    .rec-btn.play { background: #0f3460; color: #7ec8e3; }
+    .rec-btn.play:hover { background: #1a5276; }
+    .rec-btn.play:disabled { opacity: 0.3; cursor: default; }
+    .waveform { height: 36px; width: 100%; border-radius: 6px; overflow: hidden; background: #0d1b2a; display: flex; align-items: center; }
+    .wave-canvas { width: 100%; height: 36px; display: block; }
+    @keyframes pulse { from { opacity:1; } to { opacity:0.5; } }
+
+    /* トレーニングセクション */
+    #trainSection { width: 100%; max-width: 500px; }
+    .timer-display { font-size: 4rem; font-weight: bold; color: #f5f5f5; text-align: center; margin: 10px 0; font-variant-numeric: tabular-nums; }
+    .current-call { font-size: 2rem; font-weight: bold; color: #f0c040; min-height: 3rem; margin-bottom: 12px; text-align: center; }
+
+    /* モードボタン 3列対応 */
+    .modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .mode-btn {
+      background: #16213e; border: 2px solid #0f3460; color: #ccc;
+      padding: 14px 6px; border-radius: 12px; font-size: 0.82rem;
+      cursor: pointer; transition: all 0.2s; line-height: 1.6; text-align: center;
+    }
+    .mode-btn:hover { border-color: #e94560; color: #fff; }
+    .mode-btn.active { border-color: #e94560; background: #e94560; color: #fff; }
+    .mode-btn .rec-mark { font-size: 0.68rem; display: inline-block; margin-top: 4px; color: #555; }
+    .mode-btn.has-rec .rec-mark { color: #2ecc71; }
+
+    /* 速度コントロール */
+    .speed-section { margin-bottom: 16px; }
+    .speed-label-row { text-align: center; font-size: 0.9rem; color: #aaa; margin-bottom: 8px; }
+    #rateLabel { color: #f0c040; font-weight: bold; margin-left: 4px; }
+    .speed-btns { display: flex; gap: 8px; justify-content: center; }
+    .spd-btn {
+      padding: 8px 18px; border-radius: 8px; border: 2px solid #0f3460;
+      background: #16213e; color: #ccc; font-size: 0.9rem; font-weight: bold;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .spd-btn:hover { border-color: #e94560; color: #fff; background: #e94560; }
+    .spd-btn.fast-active { border-color: #f0c040; color: #f0c040; }
+
+    .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; }
+    .ctrl-btn { padding: 14px 34px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    #startBtn { background: #e94560; color: #fff; }
+    #startBtn:hover { background: #c73652; }
+    #startBtn:disabled { opacity: 0.5; cursor: default; }
+    #stopBtn { background: #333; color: #aaa; }
+    #stopBtn:hover { background: #555; color: #fff; }
+    .voice-badge { text-align: center; font-size: 0.82rem; color: #555; margin-bottom: 6px; }
+    .voice-badge span { color: #2ecc71; }
+    .status { font-size: 0.85rem; color: #666; text-align: center; }
+
+    /* インストールバナー */
+    #installBanner {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #0f3460; border-top: 2px solid #e94560;
+      padding: 14px 16px; display: flex; align-items: center;
+      gap: 12px; z-index: 100; animation: slideUp 0.3s ease;
+    }
+    #installBanner.hidden { display: none; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .install-text { flex: 1; font-size: 0.85rem; color: #ccc; line-height: 1.4; }
+    .install-text strong { color: #fff; display: block; margin-bottom: 2px; }
+    #installBtn { background: #e94560; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    #dismissBtn { background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 4px; }
+  </style>
+</head>
+<body>
+  <!-- インストールバナー (Android: 自動, iOS: 手動案内) -->
+  <div id="installBanner" class="hidden">
+    <div class="install-text">
+      <strong>📲 アプリをインストール</strong>
+      <span id="installMsg">ホーム画面に追加してオフラインでも使えます</span>
+    </div>
+    <button id="installBtn" onclick="doInstall()">追加</button>
+    <button id="dismissBtn" onclick="dismissBanner()" title="閉じる">✕</button>
+  </div>
+
+  <h1>🥊 キックボクシング 声だし</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('train')">トレーニング</button>
+    <button class="tab"        onclick="showTab('rec')">🎙 録音</button>
+  </div>
+
+  <!-- 録音タブ -->
+  <div id="recSection" style="display:none">
+    <p class="rec-title">
+      各コールを<strong>1回だけ</strong>録音してください。<br>
+      録音した声がトレーニング中に自動リピートされます。
+    </p>
+    <div class="rec-list" id="recList"></div>
+  </div>
+
+  <!-- トレーニングタブ -->
+  <div id="trainSection">
+    <div class="timer-display" id="timerDisplay">2:00</div>
+    <div class="current-call"  id="currentCall">－</div>
+    <div class="voice-badge"   id="voiceBadge">声: AIの声</div>
+
+    <div class="modes">
+      <button class="mode-btn active" data-mode="wantwo" onclick="selectMode(this)">
+        ワンツー<br><small>2分間</small><br><span class="rec-mark" id="mark-wantwo">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="combo" onclick="selectMode(this)">
+        ワンツー<br>フック<br>ストレート<br><small>2分間</small><br><span class="rec-mark" id="mark-combo">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="middle" onclick="selectMode(this)">
+        右・左<br>ミドル<br><small>2分間</small><br><span class="rec-mark" id="mark-middle">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="maegeri" onclick="selectMode(this)">
+        前蹴り<br><small>2分間</small><br><span class="rec-mark" id="mark-maegeri">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="upper" onclick="selectMode(this)">
+        アッパー<br><small>2分間</small><br><span class="rec-mark" id="mark-upper">⚪ 未録音</span>
+      </button>
+      <button class="mode-btn" data-mode="random" onclick="selectMode(this)">
+        全部<br>ランダム<br><small>2分間</small><br><span class="rec-mark" id="mark-random">⚪ 未録音</span>
+      </button>
+    </div>
+
+    <div class="speed-section">
+      <div class="speed-label-row">話す速さ：<span id="rateLabel">普通</span></div>
+      <div class="speed-btns">
+        <button class="spd-btn" id="rateBtn-slow"   onclick="setSpeechRate(0.75,'遅い')">🐢 遅い</button>
+        <button class="spd-btn fast-active" id="rateBtn-normal" onclick="setSpeechRate(1.0,'普通')">普通</button>
+        <button class="spd-btn" id="rateBtn-fast"   onclick="setSpeechRate(1.4,'速い')">🔥 速い</button>
+        <button class="spd-btn" id="rateBtn-vfast"  onclick="setSpeechRate(1.8,'激速')">⚡ 激速</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn" id="startBtn" onclick="startTraining()">▶ スタート</button>
+      <button class="ctrl-btn" id="stopBtn"  onclick="stopTraining()">■ ストップ</button>
+    </div>
+    <div class="status" id="status">モードを選んでスタートを押してください</div>
+  </div>
+
+  <script>
+  // ============================================================
+  //  コール定義
+  // ============================================================
+  const CALL_DEFS = [
+    { id: "wantwo",  label: "ワンツー！",                  display: "ワンツー！",                  ttsWords: ["ワン","ツー"] },
+    { id: "combo",   label: "ワンツー・フック・ストレート！",  display: "ワンツー フック ストレート！",   ttsWords: ["ワン","ツー","フック","ストレート"] },
+    { id: "migi",    label: "右ミドル！",                  display: "右ミドル！",                  ttsWords: ["みぎミドル"] },
+    { id: "hidari",  label: "左ミドル！",                  display: "左ミドル！",                  ttsWords: ["ひだりミドル"] },
+    { id: "maegeri", label: "前蹴り！",                    display: "前蹴り！",                    ttsWords: ["まえげり"] },
+    { id: "upper",   label: "アッパー！",                  display: "アッパー！",                  ttsWords: ["アッパー"] },
+  ];
+
+  const MODES = {
+    wantwo:  ["wantwo"],
+    combo:   ["combo"],
+    middle:  ["migi","hidari"],
+    maegeri: ["maegeri"],
+    upper:   ["upper"],
+    random:  ["wantwo","wantwo","combo","migi","hidari","maegeri","upper"],
+  };
+
+  // モードボタンの録音チェック対象
+  const MODE_REC_IDS = {
+    wantwo:  ["wantwo"],
+    combo:   ["combo"],
+    middle:  ["migi","hidari"],
+    maegeri: ["maegeri"],
+    upper:   ["upper"],
+    random:  ["wantwo","combo","migi","hidari","maegeri","upper"],
+  };
+
+  // ============================================================
+  //  AudioContext
+  // ============================================================
+  let audioCtx = null;
+  function getCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  const recBuffers  = {};   // id -> AudioBuffer（波形描画用）
+  const recBlobUrls = {};   // id -> ObjectURL（ピッチ保持再生用）
+  let activeRecId   = null;
+  let mediaRecorder = null;
+  let recChunks     = [];
+
+  // ============================================================
+  //  タブ切替
+  // ============================================================
+  function showTab(tab) {
+    document.getElementById("recSection").style.display   = tab === "rec"   ? "block" : "none";
+    document.getElementById("trainSection").style.display = tab === "train" ? "block" : "none";
+    document.querySelectorAll(".tab").forEach((t, i) => {
+      t.classList.toggle("active", (i===0 && tab==="train") || (i===1 && tab==="rec"));
+    });
+  }
+
+  // ============================================================
+  //  localStorage 保存・復元
+  // ============================================================
+  const LS_PREFIX = "kick_rec_";
+
+  // ArrayBuffer → base64 文字列
+  function bufToBase64(buf) {
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  // base64 → ArrayBuffer
+  function base64ToBuf(b64) {
+    const binary = atob(b64);
+    const buf = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+    return buf.buffer;
+  }
+
+  async function saveToStorage(id, blob) {
+    const arrayBuf = await blob.arrayBuffer();
+    try { localStorage.setItem(LS_PREFIX + id, bufToBase64(arrayBuf)); } catch(e) {}
+  }
+
+  async function loadFromStorage(id) {
+    const b64 = localStorage.getItem(LS_PREFIX + id);
+    if (!b64) return false;
+    try {
+      const arrayBuf = base64ToBuf(b64);
+      // 波形用 AudioBuffer
+      const ctx = getCtx();
+      recBuffers[id] = await ctx.decodeAudioData(arrayBuf.slice(0));
+      // 再生用 BlobURL
+      const blob = new Blob([base64ToBuf(b64)], { type: "audio/webm" });
+      if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
+      recBlobUrls[id] = URL.createObjectURL(blob);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  function clearStorage(id) {
+    localStorage.removeItem(LS_PREFIX + id);
+  }
+
+  // ============================================================
+  //  録音UI構築
+  // ============================================================
+  function buildRecUI() {
+    const list = document.getElementById("recList");
+    list.innerHTML = "";
+    CALL_DEFS.forEach(def => {
+      const row = document.createElement("div");
+      row.className = "rec-row";
+      row.id = `row-${def.id}`;
+      row.innerHTML = `
+        <div class="rec-top">
+          <span class="rec-label">${def.label}</span>
+          <span class="rec-status">✅ 録音済み</span>
+        </div>
+        <div class="rec-btns">
+          <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
+          <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
+        </div>
+        <div class="waveform" id="wave-${def.id}" style="margin-top:8px;display:none">
+          <canvas class="wave-canvas" id="canvas-${def.id}" height="36"></canvas>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+  buildRecUI();
+
+  // ページ読み込み時にlocalStorageから復元
+  async function restoreAllFromStorage() {
+    for (const def of CALL_DEFS) {
+      const ok = await loadFromStorage(def.id);
+      if (ok) onRecordDone(def.id, true); // silent=true で再保存しない
+    }
+  }
+  // AudioContext はユーザー操作後に作るため、最初のクリックで復元
+  let restored = false;
+  async function ensureRestored() {
+    if (restored) return;
+    restored = true;
+    await restoreAllFromStorage();
+  }
+  document.addEventListener("click", ensureRestored, { once: true });
+
+  // ============================================================
+  //  録音ロジック
+  // ============================================================
+  async function toggleRecord(id) {
+    if (activeRecId && activeRecId !== id) stopRecording();
+    if (activeRecId === id) { stopRecording(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = getCtx();
+      if (ctx.state === "suspended") await ctx.resume();
+      recChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recChunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recChunks, { type: "audio/webm" });
+        // localStorageに保存
+        await saveToStorage(id, blob);
+        // 波形用 AudioBuffer
+        const arrayBuf = await blob.arrayBuffer();
+        recBuffers[id] = await ctx.decodeAudioData(arrayBuf);
+        // 再生用 BlobURL（ピッチ保持用）
+        if (recBlobUrls[id]) URL.revokeObjectURL(recBlobUrls[id]);
+        recBlobUrls[id] = URL.createObjectURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+        onRecordDone(id);
+        activeRecId = null;
+      };
+      mediaRecorder.start();
+      activeRecId = id;
+      const btn = document.getElementById(`recBtn-${id}`);
+      btn.textContent = "⏹ 停止";
+      btn.classList.add("recording");
+    } catch(e) {
+      alert("マイクへのアクセスを許可してください。");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  }
+
+  function onRecordDone(id, silent = false) {
+    const recBtn  = document.getElementById(`recBtn-${id}`);
+    const playBtn = document.getElementById(`playBtn-${id}`);
+    if (recBtn) { recBtn.textContent = "🔄 録り直し"; recBtn.classList.remove("recording"); }
+    if (playBtn) playBtn.disabled = false;
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.classList.add("done");
+    drawWaveform(id);
+    updateVoiceBadge();
+    updateModeButtons();
+  }
+
+  function drawWaveform(id) {
+    const buf    = recBuffers[id]; if (!buf) return;
+    const wrap   = document.getElementById(`wave-${id}`);
+    const canvas = document.getElementById(`canvas-${id}`);
+    wrap.style.display = "block";
+    canvas.width = wrap.offsetWidth || 400; canvas.height = 36;
+    const ctx  = canvas.getContext("2d");
+    const data = buf.getChannelData(0);
+    const step = Math.ceil(data.length / canvas.width);
+    const amp  = canvas.height / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#e94560"; ctx.lineWidth = 1; ctx.beginPath();
+    for (let i = 0; i < canvas.width; i++) {
+      let min = 1, max = -1;
+      for (let j = 0; j < step; j++) {
+        const v = data[i * step + j] || 0;
+        if (v < min) min = v; if (v > max) max = v;
+      }
+      ctx.moveTo(i, (1 + min) * amp); ctx.lineTo(i, (1 + max) * amp);
+    }
+    ctx.stroke();
+  }
+
+  function playRec(id) {
+    if (!recBlobUrls[id]) return;
+    const audio = new Audio(recBlobUrls[id]);
+    audio.playbackRate = speechRate;
+    audio.preservesPitch = true;          // Chrome/Edge/Safari
+    audio.mozPreservesPitch = true;       // Firefox
+    audio.webkitPreservesPitch = true;    // 古いSafari
+    audio.volume = 1.0;
+    audio.play();
+  }
+
+  function updateVoiceBadge() {
+    const done  = CALL_DEFS.filter(d => recBlobUrls[d.id]).length;
+    const badge = document.getElementById("voiceBadge");
+    if (done === 0) {
+      badge.innerHTML = "声: AIの声"; badge.style.color = "#555";
+    } else if (done === CALL_DEFS.length) {
+      badge.innerHTML = "声: <span>自分の声（全コール録音済み）✅</span>";
+    } else {
+      badge.innerHTML = `声: <span>自分の声（${done}/${CALL_DEFS.length} 録音済み）</span> ＋ AIの声`;
+    }
+  }
+
+  function updateModeButtons() {
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+      const mode    = btn.dataset.mode;
+      const ids     = MODE_REC_IDS[mode] || [];
+      const done    = ids.filter(id => recBlobUrls[id]).length;
+      const allDone = done === ids.length;
+      btn.classList.toggle("has-rec", allDone);
+      const mark = document.getElementById(`mark-${mode}`);
+      if (mark) {
+        mark.textContent = allDone ? "🎙 録音済" : done > 0 ? `🎙 ${done}/${ids.length}` : "⚪ 未録音";
+      }
+    });
+  }
+
+  // ============================================================
+  //  TTS
+  // ============================================================
+  let synth  = window.speechSynthesis;
+  let voices = [];
+  function loadVoices() { voices = synth.getVoices(); }
+  loadVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+  function getJpVoice() {
+    return voices.find(v => v.lang === "ja-JP") || voices.find(v => v.lang.startsWith("ja")) || voices[0];
+  }
+  function makeUtter(word) {
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = "ja-JP"; u.rate = 1.1 * speechRate; u.pitch = 1.2; u.volume = 1.0;
+    const v = getJpVoice(); if (v) u.voice = v;
+    return u;
+  }
+
+  // ============================================================
+  //  再生（自分の声優先 → TTSフォールバック）
+  // ============================================================
+  function playCallId(id) {
+    return new Promise(resolve => {
+      if (recBlobUrls[id]) {
+        const audio = new Audio(recBlobUrls[id]);
+        audio.playbackRate      = speechRate;
+        audio.preservesPitch    = true;
+        audio.mozPreservesPitch = true;
+        audio.webkitPreservesPitch = true;
+        audio.volume = 1.0;
+        audio.onended = () => resolve();
+        audio.onerror = () => resolve();
+        audio.play();
+      } else {
+        const def   = CALL_DEFS.find(d => d.id === id);
+        const words = def ? def.ttsWords : [id];
+        synth.cancel();
+        words.forEach((word, i) => {
+          const u = makeUtter(word);
+          if (i === words.length - 1) u.onend = u.onerror = () => resolve();
+          synth.speak(u);
+        });
+      }
+    });
+  }
+
+  function playTTS(words) {
+    return new Promise(resolve => {
+      synth.cancel();
+      words.forEach((word, i) => {
+        const u = makeUtter(word);
+        if (i === words.length - 1) u.onend = u.onerror = () => resolve();
+        synth.speak(u);
+      });
+    });
+  }
+
+  // ============================================================
+  //  話す速さコントロール
+  // ============================================================
+  let speechRate = 1.0;  // TTS rate / 録音 playbackRate 共通
+
+  function setSpeechRate(rate, label) {
+    speechRate = rate;
+    document.getElementById("rateLabel").textContent = label;
+    document.querySelectorAll(".spd-btn").forEach(b => b.classList.remove("fast-active"));
+    const map = { 0.75: "slow", 1.0: "normal", 1.4: "fast", 1.8: "vfast" };
+    const btn = document.getElementById(`rateBtn-${map[rate]}`);
+    if (btn) btn.classList.add("fast-active");
+  }
+
+  // ============================================================
+  //  トレーニング
+  // ============================================================
+  let selectedMode  = "wantwo";
+  let timerInterval = null;
+  let callTimeout   = null;
+  let timeLeft      = 0;
+  const DURATION    = 2 * 60;
+  let running       = false;
+
+  // シャッフルキュー（ランダムモード用：全コールを均等に回す）
+  let shuffleQueue = [];
+  function nextFromQueue(list) {
+    if (shuffleQueue.length === 0) {
+      // リストをコピーしてシャッフル
+      shuffleQueue = [...list].sort(() => Math.random() - 0.5);
+    }
+    return shuffleQueue.shift();
+  }
+
+  function selectMode(btn) {
+    if (running) return;
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedMode = btn.dataset.mode;
+    shuffleQueue = []; // モード変更時はキューリセット
+  }
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${m}:${s.toString().padStart(2,"0")}`;
+  }
+
+  async function scheduleNextCall() {
+    if (!running) return;
+    const list = MODES[selectedMode];
+    // randomモードはシャッフルキューで均等に、それ以外は純粋ランダム
+    const id = selectedMode === "random"
+      ? nextFromQueue(list)
+      : list[Math.floor(Math.random() * list.length)];
+    const def  = CALL_DEFS.find(d => d.id === id);
+    document.getElementById("currentCall").textContent = def ? def.display : id;
+    await playCallId(id);
+    if (!running) return;
+    callTimeout = setTimeout(scheduleNextCall, 300); // 発声後0.3秒で次へ
+  }
+
+  async function startTraining() {
+    if (running) return;
+    if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume();
+    running  = true;
+    timeLeft = DURATION;
+    document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
+    document.getElementById("status").textContent = "トレーニング中...";
+    document.getElementById("startBtn").disabled = true;
+    document.querySelectorAll(".mode-btn").forEach(b => b.style.pointerEvents = "none");
+    document.getElementById("currentCall").textContent = "スタート！";
+    await playTTS(["スタート"]);
+    callTimeout = setTimeout(scheduleNextCall, 600);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
+      if (timeLeft <= 0) stopTraining(true);
+    }, 1000);
+  }
+
+  async function stopTraining(finished = false) {
+    running = false;
+    clearInterval(timerInterval);
+    clearTimeout(callTimeout);
+    synth.cancel();
+    document.getElementById("startBtn").disabled = false;
+    document.querySelectorAll(".mode-btn").forEach(b => b.style.pointerEvents = "auto");
+    timeLeft = DURATION;
+    document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
+    if (finished) {
+      document.getElementById("currentCall").textContent = "終了！";
+      document.getElementById("status").textContent = "2分間お疲れ様でした！";
+      await playTTS(["終了。お疲れ様でした。"]);
+    } else {
+      document.getElementById("currentCall").textContent = "－";
+      document.getElementById("status").textContent = "停止しました";
+    }
+  }
+  </script>
+
+  <script>
+  // ============================================================
+  //  PWA: サービスワーカー登録
+  // ============================================================
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  // ============================================================
+  //  PWA: インストールプロンプト (Android Chrome)
+  // ============================================================
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showBanner('android');
+  });
+
+  function showBanner(type) {
+    const banner = document.getElementById('installBanner');
+    if (type === 'ios') {
+      document.getElementById('installMsg').textContent =
+        'Safariの 共有ボタン → 「ホーム画面に追加」でインストールできます';
+      document.getElementById('installBtn').style.display = 'none';
+    }
+    banner.classList.remove('hidden');
+  }
+
+  function doInstall() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; dismissBanner(); });
+  }
+
+  function dismissBanner() {
+    document.getElementById('installBanner').classList.add('hidden');
+    sessionStorage.setItem('installDismissed', '1');
+  }
+
+  // iOS Safari の検出（インストール済みでない場合のみ案内）
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandalone = window.navigator.standalone === true;
+  if (isIos && !isInStandalone && !sessionStorage.getItem('installDismissed')) {
+    showBanner('ios');
+  }
+  </script>
+</body>
+</html>
