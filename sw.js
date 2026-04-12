@@ -1,4 +1,4 @@
-const CACHE = 'kickboxing-v1';
+const CACHE = 'kickboxing-v3';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg'];
 
 self.addEventListener('install', ev => {
