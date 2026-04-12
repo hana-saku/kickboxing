@@ -642,7 +642,7 @@
       btn.innerHTML=`<span id="modeName-${def.id}">${def.label}</span>
         <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>
         <label class="rand-toggle" id="randLabel-${def.id}" onclick="event.stopPropagation()">
-          <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">含める</label>`;
+          <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">ランダムに含める</label>`;
       c.appendChild(btn);
     });
   }
