@@ -792,7 +792,8 @@
     u.lang="ja-JP"; u.rate=1.1*speechRate; u.pitch=1.2; u.volume=1.0;
     const v=getJpVoice(); if(v) u.voice=v; return u;
   }
-  let currentCallAudio = null; // 再生中の録音音声
+  let currentCallAudio = null;    // 再生中の録音音声
+  let currentCallPromise = null;  // 再生中の声のPromise
 
   function stopCurrentCall(){
     if(currentCallAudio){
@@ -993,7 +994,9 @@
     const def=CALL_DEFS.find(d=>d.id===id);
     document.getElementById("currentCall").textContent=def?def.display:id;
     vibrate([80]);
-    await playCallId(id);
+    currentCallPromise = playCallId(id);
+    await currentCallPromise;
+    currentCallPromise = null;
     if(!running||isResting) return;
     const delay=(callDelays[id]||0)*1000;
     callTimeout=setTimeout(scheduleNextCall,300+delay);
@@ -1043,8 +1046,9 @@
 
 
   async function onRoundEnd(){
-    isResting=true; // 並行中のscheduleNextCallをすぐ止める
-    clearTimeout(callTimeout); stopCurrentCall(); // 再生中の声を即カット
+    isResting=true; // 新たな声の予約をブロック
+    clearTimeout(callTimeout);
+    if(currentCallPromise) await currentCallPromise; // 今の声を最後まで言い切る
     if(!running) return;
     saveRound(); // 履歴に記録
     await playEndBell(); vibrate([400]);
