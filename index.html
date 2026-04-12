@@ -103,6 +103,18 @@
     .spd-btn:hover { border-color: #e94560; color: #fff; background: #e94560; }
     .spd-btn.fast-active { border-color: #f0c040; color: #f0c040; }
 
+    /* 時間設定 */
+    .duration-section { margin-bottom: 16px; text-align: center; }
+    .duration-label-row { font-size: 0.9rem; color: #aaa; margin-bottom: 8px; }
+    .duration-input-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .duration-input {
+      width: 64px; background: #0d1b2a; border: 2px solid #0f3460;
+      border-radius: 8px; color: #f0c040; font-size: 1.3rem; font-weight: bold;
+      text-align: center; padding: 6px 4px; outline: none;
+    }
+    .duration-input:focus { border-color: #e94560; }
+    .duration-unit { font-size: 1rem; color: #aaa; }
+
     .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; }
     .ctrl-btn { padding: 14px 34px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
     #startBtn { background: #e94560; color: #fff; }
@@ -197,6 +209,15 @@
         <button class="spd-btn fast-active" id="rateBtn-normal" onclick="setSpeechRate(1.0,'普通')">普通</button>
         <button class="spd-btn" id="rateBtn-fast"   onclick="setSpeechRate(1.4,'速い')">🔥 速い</button>
         <button class="spd-btn" id="rateBtn-vfast"  onclick="setSpeechRate(1.8,'激速')">⚡ 激速</button>
+      </div>
+    </div>
+
+    <div class="duration-section">
+      <div class="duration-label-row">⏱ トレーニング時間</div>
+      <div class="duration-input-row">
+        <input class="duration-input" id="durationInput" type="number" min="1" max="99" value="2"
+          oninput="onDurationInput(this.value)">
+        <span class="duration-unit">分（1〜99分）</span>
       </div>
     </div>
 
@@ -665,9 +686,25 @@
   let timerInterval = null;
   let callTimeout   = null;
   let timeLeft      = 0;
-  const DURATION    = 2 * 60;
   let running       = false;
   let shuffleQueue  = [];
+
+  // 時間設定（localStorageから復元）
+  let trainingMinutes = parseInt(localStorage.getItem('kick_duration') || '2', 10);
+  function getDuration() { return trainingMinutes * 60; }
+  function onDurationInput(val) {
+    const n = Math.max(1, Math.min(99, parseInt(val, 10) || 2));
+    trainingMinutes = n;
+    localStorage.setItem('kick_duration', n);
+    // タイマー表示をリセット
+    if (!running) document.getElementById("timerDisplay").textContent = formatTime(getDuration());
+  }
+  // 入力欄に保存済みの値をセット
+  window.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('durationInput');
+    if (inp) inp.value = trainingMinutes;
+    document.getElementById("timerDisplay").textContent = formatTime(getDuration());
+  });
 
   function getCallList(mode) {
     // カスタムモードの場合はそのIDのみ
@@ -719,7 +756,7 @@
     if (running) return;
     if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume();
     running  = true;
-    timeLeft = DURATION;
+    timeLeft = getDuration();
     document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
     document.getElementById("status").textContent = "トレーニング中...";
     document.getElementById("startBtn").disabled = true;
@@ -741,7 +778,7 @@
     synth.cancel();
     document.getElementById("startBtn").disabled = false;
     document.querySelectorAll(".mode-btn").forEach(b => b.style.pointerEvents = "auto");
-    timeLeft = DURATION;
+    timeLeft = getDuration();
     document.getElementById("timerDisplay").textContent = formatTime(timeLeft);
     if (finished) {
       document.getElementById("currentCall").textContent = "終了！";
