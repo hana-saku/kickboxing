@@ -241,6 +241,13 @@
     </div>
     <div class="status" id="status">モードを選んでスタートを押してください</div>
 
+    <!-- ゴングのみ（スタート/ストップ直下） -->
+    <div style="margin:8px 0 10px">
+      <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
+        🔔 ゴングのみ<br><span style="font-size:0.75rem;color:#f0c040">声なし・ラウンド開始時にゴングだけ</span>
+      </button>
+    </div>
+
     <!-- 繰り返しモード（基本＋カスタム） -->
     <p class="section-title">🔁 繰り返しモード</p>
     <div class="modes" id="baseModes">
@@ -298,23 +305,6 @@
     </div>
     <div class="modes" id="singleCustomModes"></div>
 
-    <!-- ゴングのみモード（一番下） -->
-    <div style="margin-bottom:10px">
-      <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
-        🔔 ゴングのみ<br><span style="font-size:0.75rem;color:#f0c040">声なし・ゴング音だけ</span>
-      </button>
-    </div>
-
-    <!-- ゴング間隔設定（ゴングのみ選択時に表示・一番下） -->
-    <div class="gong-interval-box" id="gongIntervalBox">
-      <div class="gong-interval-title">🔔 ゴングを鳴らす間隔</div>
-      <div class="gong-custom-row">
-        <input class="gong-custom-input" id="gongMinInput" type="number" min="0" max="99" value="0" oninput="updateGongInterval()">
-        <span>分</span>
-        <input class="gong-custom-input" id="gongSecInput" type="number" min="0" max="59" value="30" oninput="updateGongInterval()">
-        <span>秒ごとに鳴らす</span>
-      </div>
-    </div>
 
   </div>
 
@@ -969,14 +959,6 @@
     if(running) return;
     document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active"); selectedMode=btn.dataset.mode; shuffleQueue=[];
-    // ゴングのみモード時に間隔設定を表示してスクロール
-    const box=document.getElementById("gongIntervalBox");
-    if(box){
-      box.classList.toggle("visible", selectedMode==="gong-only");
-      if(selectedMode==="gong-only"){
-        setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),150);
-      }
-    }
   }
 
   function updateRoundLabel(){
@@ -1024,12 +1006,10 @@
       singleQueue=[...getSingleList()].sort(()=>Math.random()-0.5);
     }
     if(selectedMode==="gong-only"){
-      const gm=Math.floor(gongIntervalSec/60), gs=gongIntervalSec%60;
-      const gLabel=gm>0?(gs>0?`${gm}分${gs}秒`:`${gm}分`):`${gs}秒`;
       document.getElementById("currentCall").textContent="🔔";
-      document.getElementById("status").textContent=`${gLabel}ごとにゴングが鳴ります`;
+      document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
       await playBell(); vibrate([300]);
-      callTimeout=setTimeout(scheduleGongOnly, gongIntervalSec*1000);
+      // タイマーのみ・ゴングは繰り返さない
     } else {
       const isFinal = currentRound === getRounds();
       document.getElementById("currentCall").textContent= isFinal ? "FINAL ROUND!" : "スタート！";
@@ -1071,10 +1051,22 @@
         isResting=true; timeLeft=restSec; updateRoundLabel();
         document.getElementById("currentCall").textContent="💤 Interval";
         document.getElementById("status").textContent="インターバル中... 次のラウンドまで待機";
-        await playRestAnnouncement();
+        await playRestAnnouncement(); // 開始時に "Interval"
         timerInterval=setInterval(()=>{
           timeLeft--;
           document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
+          if(timeLeft===10 && restSec>10){
+            // 残り10秒アナウンス（日本語）
+            synth.cancel();
+            synth.speak(makeUtter("残り10秒"));
+          } else if(timeLeft>10 && timeLeft%10===0){
+            // 10秒おきに "Interval"（英語）
+            const u=new SpeechSynthesisUtterance("Interval");
+            u.lang="en-US"; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+            const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
+            if(enV) u.voice=enV;
+            synth.cancel(); synth.speak(u);
+          }
           if(timeLeft<=0){clearInterval(timerInterval);currentRound++;startRound();}
         },1000);
       }
