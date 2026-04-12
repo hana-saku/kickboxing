@@ -63,6 +63,9 @@
     }
     .setting-input:focus { border-color: #e94560; }
     .setting-unit { font-size: 0.72rem; color: #555; margin-top: 2px; }
+    .time-row { display: flex; align-items: center; justify-content: center; gap: 3px; }
+    .time-inp { width: 44px !important; padding: 6px 2px; font-size: 1rem; }
+    .time-sep { font-size: 0.8rem; color: #666; }
     /* 速さ */
     .speed-row { display: flex; gap: 6px; }
     .spd-btn {
@@ -205,16 +208,23 @@
           <div class="setting-unit">回</div>
         </div>
         <div class="setting-item">
-          <label>試合時間</label>
-          <input class="setting-input" id="workInput" type="number" min="1" max="99" value="2"
-            oninput="onSettingChange()">
-          <div class="setting-unit">分</div>
+          <label>時間</label>
+          <div class="time-row">
+            <input class="setting-input time-inp" id="workMinInput" type="number" min="0" max="99" value="2" oninput="onSettingChange()">
+            <span class="time-sep">分</span>
+            <input class="setting-input time-inp" id="workSecInput" type="number" min="0" max="59" value="0" oninput="onSettingChange()">
+            <span class="time-sep">秒</span>
+          </div>
         </div>
         <div class="setting-item">
           <label>休憩時間</label>
-          <input class="setting-input" id="restInput" type="number" min="0" max="99" value="1"
-            oninput="onSettingChange()">
-          <div class="setting-unit">分（0=なし）</div>
+          <div class="time-row">
+            <input class="setting-input time-inp" id="restMinInput" type="number" min="0" max="99" value="1" oninput="onSettingChange()">
+            <span class="time-sep">分</span>
+            <input class="setting-input time-inp" id="restSecInput" type="number" min="0" max="59" value="0" oninput="onSettingChange()">
+            <span class="time-sep">秒</span>
+          </div>
+          <div class="setting-unit">（0分0秒=なし）</div>
         </div>
       </div>
       <div class="speed-row">
@@ -837,23 +847,31 @@
   // ============================================================
   function loadSettings(){
     const r=localStorage.getItem("kick_rounds");
-    const w=localStorage.getItem("kick_work");
-    const rs=localStorage.getItem("kick_rest");
+    const w=localStorage.getItem("kick_work");   // 秒単位で保存
+    const rs=localStorage.getItem("kick_rest");  // 秒単位で保存
     if(r) document.getElementById("roundsInput").value=r;
-    if(w) document.getElementById("workInput").value=w;
-    if(rs) document.getElementById("restInput").value=rs;
+    if(w){const wv=parseInt(w);document.getElementById("workMinInput").value=Math.floor(wv/60);document.getElementById("workSecInput").value=wv%60;}
+    if(rs){const rv=parseInt(rs);document.getElementById("restMinInput").value=Math.floor(rv/60);document.getElementById("restSecInput").value=rv%60;}
     updateTimerDisplay();
   }
   function onSettingChange(){
     localStorage.setItem("kick_rounds",getRounds());
-    localStorage.setItem("kick_work",getWorkMin());
-    localStorage.setItem("kick_rest",getRestMin());
+    localStorage.setItem("kick_work",getWorkSec());
+    localStorage.setItem("kick_rest",getRestSec());
     if(!running) updateTimerDisplay();
   }
   function getRounds(){return Math.max(1,Math.min(20,parseInt(document.getElementById("roundsInput").value)||3));}
-  function getWorkMin(){return Math.max(1,Math.min(99,parseInt(document.getElementById("workInput").value)||2));}
-  function getRestMin(){return Math.max(0,Math.min(99,parseInt(document.getElementById("restInput").value)||1));}
-  function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkMin()*60);}
+  function getWorkSec(){
+    const m=Math.max(0,Math.min(99,parseInt(document.getElementById("workMinInput").value)||0));
+    const s=Math.max(0,Math.min(59,parseInt(document.getElementById("workSecInput").value)||0));
+    return Math.max(1, m*60+s);
+  }
+  function getRestSec(){
+    const m=Math.max(0,Math.min(99,parseInt(document.getElementById("restMinInput").value)||0));
+    const s=Math.max(0,Math.min(59,parseInt(document.getElementById("restSecInput").value)||0));
+    return m*60+s;
+  }
+  function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
   window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();});
 
@@ -936,7 +954,7 @@
 
   async function startRound(){
     isResting=false;
-    timeLeft=getWorkMin()*60;
+    timeLeft=getWorkSec();
     updateRoundLabel();
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
     if(selectedMode==="gong-only"){
@@ -980,7 +998,7 @@
       finishTraining();
     } else {
       // 休憩
-      const restSec=getRestMin()*60;
+      const restSec=getRestSec();
       if(restSec===0){
         currentRound++; await startRound();
       } else {
