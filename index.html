@@ -223,8 +223,6 @@
           <input type="checkbox" id="rand-upper" checked onchange="toggleRandom('upper',this.checked)">ランダムに含める
         </label>
       </button>
-    </div>
-
       <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)">
         🔔 ゴングのみ<br><span style="font-size:0.72rem;color:#f0c040">間隔タイマー</span>
         <span class="rec-mark"></span>
@@ -368,25 +366,31 @@
     return audioCtx;
   }
 
-  // 開始ゴング（録音済み→gong.mp3→自動生成）
+  // 開始ゴング（プリロード）
+  const startBellAudio = new Audio("./gong.mp3");
+  startBellAudio.preload = "auto";
+
   function playBell() {
     return new Promise(resolve => {
-      const src = recBlobUrls["bell"] ? recBlobUrls["bell"] : "./gong.mp3";
-      const a = new Audio(src);
-      a.volume = 1.0;
-      a.onended = () => resolve();
-      a.onerror = () => { playBellSynth(); resolve(); };
-      a.play().catch(() => { playBellSynth(); resolve(); });
+      const audio = recBlobUrls["bell"] ? new Audio(recBlobUrls["bell"]) : startBellAudio;
+      if(!recBlobUrls["bell"]) audio.currentTime = 0;
+      audio.volume = 1.0;
+      audio.onended = () => resolve();
+      audio.onerror = () => { playBellSynth(); resolve(); };
+      audio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
-  // 終了ゴング（gong-end.mp3→自動生成）
+  // 終了ゴング（プリロードして確実に再生）
+  const endBellAudio = new Audio("./gong-end.mp3");
+  endBellAudio.preload = "auto";
+
   function playEndBell() {
     return new Promise(resolve => {
-      const a = new Audio("./gong-end.mp3");
-      a.volume = 1.0;
-      a.onended = () => resolve();
-      a.onerror = () => { playBellSynth(); resolve(); };
-      a.play().catch(() => { playBellSynth(); resolve(); });
+      endBellAudio.currentTime = 0;
+      endBellAudio.volume = 1.0;
+      endBellAudio.onended = () => resolve();
+      endBellAudio.onerror = () => { playBellSynth(); resolve(); };
+      endBellAudio.play().catch(() => { playBellSynth(); resolve(); });
     });
   }
   function playBellSynth() {
