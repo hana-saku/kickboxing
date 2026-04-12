@@ -234,18 +234,10 @@
     <!-- ゴング間隔設定（ゴングのみモード選択時に表示） -->
     <div class="gong-interval-box" id="gongIntervalBox">
       <div class="gong-interval-title">🔔 ゴングを鳴らす間隔</div>
-      <div class="gong-presets">
-        <button class="gong-preset-btn" onclick="setGongInterval(10)">10秒</button>
-        <button class="gong-preset-btn" onclick="setGongInterval(20)">20秒</button>
-        <button class="gong-preset-btn active" id="gongPreset-30" onclick="setGongInterval(30)">30秒</button>
-        <button class="gong-preset-btn" onclick="setGongInterval(45)">45秒</button>
-        <button class="gong-preset-btn" onclick="setGongInterval(60)">1分</button>
-        <button class="gong-preset-btn" onclick="setGongInterval(120)">2分</button>
-      </div>
       <div class="gong-custom-row">
-        <span>カスタム：</span>
-        <input class="gong-custom-input" id="gongCustomInput" type="number" min="1" max="999" placeholder="秒"
-          oninput="setGongIntervalCustom(this.value)">
+        <input class="gong-custom-input" id="gongMinInput" type="number" min="0" max="99" value="0" oninput="updateGongInterval()">
+        <span>分</span>
+        <input class="gong-custom-input" id="gongSecInput" type="number" min="0" max="59" value="30" oninput="updateGongInterval()">
         <span>秒ごとに鳴らす</span>
       </div>
     </div>
@@ -836,7 +828,7 @@
   function getRestMin(){return Math.max(0,Math.min(99,parseInt(document.getElementById("restInput").value)||1));}
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkMin()*60);}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();});
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();});
 
   // ============================================================
   //  トレーニング
@@ -853,26 +845,26 @@
     if(shuffleQueue.length===0) shuffleQueue=[...list].sort(()=>Math.random()-0.5);
     return shuffleQueue.shift();
   }
-  // ゴング間隔設定
+  // ゴング間隔設定（分＋秒）
   let gongIntervalSec = parseInt(localStorage.getItem("kick_gong_interval")||"30",10);
 
-  function setGongInterval(sec){
-    gongIntervalSec = sec;
-    localStorage.setItem("kick_gong_interval", sec);
-    document.querySelectorAll(".gong-preset-btn").forEach(b=>b.classList.remove("active"));
-    const presetMap={10:"10",20:"20",30:"30",45:"45",60:"60",120:"120"};
-    // プリセットボタンのアクティブ化
-    document.querySelectorAll(".gong-preset-btn").forEach(b=>{
-      if(parseInt(b.textContent)===sec||(sec===60&&b.textContent==="1分")||(sec===120&&b.textContent==="2分")) b.classList.add("active");
-    });
-    const ci=document.getElementById("gongCustomInput");
-    if(ci) ci.value="";
+  function updateGongInterval(){
+    const m = Math.max(0, parseInt(document.getElementById("gongMinInput").value)||0);
+    const s = Math.max(0, Math.min(59, parseInt(document.getElementById("gongSecInput").value)||0));
+    const total = Math.max(1, m*60 + s);
+    gongIntervalSec = total;
+    localStorage.setItem("kick_gong_interval", total);
   }
-  function setGongIntervalCustom(val){
-    const n=Math.max(1,parseInt(val,10)||30);
-    gongIntervalSec=n;
-    localStorage.setItem("kick_gong_interval",n);
-    document.querySelectorAll(".gong-preset-btn").forEach(b=>b.classList.remove("active"));
+
+  function loadGongIntervalInputs(){
+    const saved = parseInt(localStorage.getItem("kick_gong_interval")||"30",10);
+    gongIntervalSec = saved;
+    const m = Math.floor(saved/60);
+    const s = saved % 60;
+    const mi = document.getElementById("gongMinInput");
+    const si = document.getElementById("gongSecInput");
+    if(mi) mi.value = m;
+    if(si) si.value = s;
   }
 
   function selectMode(btn){
@@ -916,8 +908,10 @@
     updateRoundLabel();
     document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
     if(selectedMode==="gong-only"){
+      const gm=Math.floor(gongIntervalSec/60), gs=gongIntervalSec%60;
+      const gLabel=gm>0?(gs>0?`${gm}分${gs}秒`:`${gm}分`):`${gs}秒`;
       document.getElementById("currentCall").textContent="🔔";
-      document.getElementById("status").textContent=`${gongIntervalSec}秒ごとにゴングが鳴ります`;
+      document.getElementById("status").textContent=`${gLabel}ごとにゴングが鳴ります`;
       await playBell(); vibrate([300]);
       callTimeout=setTimeout(scheduleGongOnly, gongIntervalSec*1000);
     } else {
