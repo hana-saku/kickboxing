@@ -297,12 +297,6 @@
 
     <!-- 単発モード -->
     <p class="section-title" style="margin-top:10px">⚡ 単発モード</p>
-    <div style="margin-bottom:10px">
-      <button class="mode-btn" data-mode="single" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
-        ⚡ 単発モード<br>
-        <span style="font-size:0.75rem;color:#f0c040">選択した項目を各1回だけ再生（繰り返しなし）</span>
-      </button>
-    </div>
     <div class="modes" id="singleCustomModes"></div>
 
 
@@ -836,9 +830,15 @@
   // ============================================================
   //  ラウンドアナウンス（英語）
   // ============================================================
-  const ROUND_NAMES = ["One","Two","Three","Four","Five","Six","Seven","Eight",
-    "Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen",
-    "Sixteen","Seventeen","Eighteen","Nineteen","Twenty"];
+  const ROUND_NAMES_1 = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
+    "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const ROUND_NAMES_10 = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  function roundNumToWords(n){
+    if(n<=0||n>99) return String(n);
+    if(n<20) return ROUND_NAMES_1[n];
+    const tens=Math.floor(n/10), ones=n%10;
+    return ones===0 ? ROUND_NAMES_10[tens] : ROUND_NAMES_10[tens]+" "+ROUND_NAMES_1[ones];
+  }
 
   function playEnglish(text) {
     return new Promise(resolve => {
@@ -851,8 +851,7 @@
     });
   }
   function playRoundAnnouncement(roundNum) {
-    const name = ROUND_NAMES[roundNum - 1] || String(roundNum);
-    return playEnglish(`Round ${name}`);
+    return playEnglish(`Round ${roundNumToWords(roundNum)}`);
   }
   function playRestAnnouncement() {
     return playEnglish("Interval");
@@ -1026,8 +1025,11 @@
       singleQueue=[...getSingleList()].sort(()=>Math.random()-0.5);
     }
     if(selectedMode==="gong-only"){
+      const isFinalG = currentRound === getRounds();
       document.getElementById("currentCall").textContent="🔔";
       document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
+      if(isFinalG){ await playEnglish("Final Round"); } else { await playRoundAnnouncement(currentRound); }
+      if(!running) return;
       await playBell(); vibrate([300]);
       // タイマーのみ・ゴングは繰り返さない
     } else {
