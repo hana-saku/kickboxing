@@ -74,13 +74,19 @@
       cursor: pointer; transition: all 0.2s;
     }
     .spd-btn.active { border-color: #f0c040; color: #f0c040; background: #0d1b2a; }
-    .vol-row { display: flex; gap: 6px; margin-top: 6px; }
-    .vol-btn {
-      flex: 1; padding: 8px 0; border-radius: 8px; border: 2px solid #0f3460;
-      background: #0d1b2a; color: #aaa; font-size: 0.78rem; font-weight: bold;
-      cursor: pointer; transition: all 0.2s;
+    /* 音量スライダー */
+    .vol-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .vol-row label { font-size: 0.75rem; color: #aaa; white-space: nowrap; }
+    .vol-slider { flex: 1; accent-color: #2ecc71; height: 6px; cursor: pointer; }
+    .vol-val { font-size: 0.78rem; color: #2ecc71; font-weight: bold; min-width: 36px; text-align: right; }
+    /* 声タイプ */
+    .voice-type-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+    .vt-btn {
+      flex: 1; min-width: 70px; padding: 7px 2px; border-radius: 8px; border: 2px solid #0f3460;
+      background: #0d1b2a; color: #aaa; font-size: 0.72rem; font-weight: bold;
+      cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.4;
     }
-    .vol-btn.active { border-color: #2ecc71; color: #2ecc71; background: #0d1b2a; }
+    .vt-btn.active { border-color: #e94560; color: #fff; background: #e94560; }
 
     /* スタート/ストップ */
     .controls { display: flex; gap: 14px; justify-content: center; margin-bottom: 10px; }
@@ -241,9 +247,19 @@
         <button class="spd-btn" id="spd-vfast"  onclick="setSpeechRate(1.8,'⚡ 激速','vfast')">⚡ 激速</button>
       </div>
       <div class="vol-row">
-        <button class="vol-btn" id="vol-1" onclick="setVolume(1.0,'vol-1')">🔈 普通</button>
-        <button class="vol-btn" id="vol-2" onclick="setVolume(2.0,'vol-2')">🔊 大きい</button>
-        <button class="vol-btn active" id="vol-3" onclick="setVolume(3.0,'vol-3')">📢 MAX</button>
+        <label>🔊 音量</label>
+        <input class="vol-slider" id="volSlider" type="range" min="1" max="300" value="200" oninput="onVolumeSlider(this.value)">
+        <span class="vol-val" id="volVal">200%</span>
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-size:0.72rem;color:#aaa;margin-bottom:4px">🎙 声のタイプ（録音再生時）</div>
+        <div class="voice-type-row">
+          <button class="vt-btn active" id="vt-self"   onclick="setVoiceType('self')">自分の声</button>
+          <button class="vt-btn"        id="vt-bro"    onclick="setVoiceType('bro')">👦 お兄さん</button>
+          <button class="vt-btn"        id="vt-coach"  onclick="setVoiceType('coach')">💪 男コーチ</button>
+          <button class="vt-btn"        id="vt-sis"    onclick="setVoiceType('sis')">👧 お姉さん</button>
+          <button class="vt-btn"        id="vt-fcoach" onclick="setVoiceType('fcoach')">🔥 女コーチ</button>
+        </div>
       </div>
     </div>
 
@@ -816,20 +832,31 @@
   function playCallId(id){
     return new Promise(resolve=>{
       if(recBlobUrls[id]){
-        const a=new Audio(recBlobUrls[id]);
-        currentCallAudio=a;
-        a.playbackRate=speechRate; a.preservesPitch=true;
-        a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
-        // Web Audio API で音量増幅
-        try{
-          const ctx=getCtx(); if(ctx.state==="suspended") ctx.resume();
-          const src=ctx.createMediaElementSource(a);
-          const gain=ctx.createGain(); gain.gain.value=callVolume;
-          src.connect(gain); gain.connect(ctx.destination);
-        }catch(e){ a.volume=Math.min(1.0,callVolume); }
-        a.onended=()=>{currentCallAudio=null;resolve();};
-        a.onerror=()=>{currentCallAudio=null;resolve();};
-        a.play();
+        // 録音音声：声タイプ＋音量をWeb Audio APIで適用
+        const vt=VOICE_TYPES[voiceType]||VOICE_TYPES.self;
+        const rate=speechRate*(vt.rate);
+        fetch(recBlobUrls[id])
+          .then(r=>r.arrayBuffer())
+          .then(ab=>{
+            const ctx=getCtx(); if(ctx.state==="suspended") ctx.resume();
+            return ctx.decodeAudioData(ab);
+          })
+          .then(buffer=>{
+            const ctx=getCtx();
+            const src=ctx.createBufferSource();
+            src.buffer=buffer;
+            // 声タイプ：preservesPitch=falseでピッチも変わる
+            src.playbackRate.value=rate;
+            // 音量ゲイン
+            const gain=ctx.createGain();
+            gain.gain.value=callVolume;
+            src.connect(gain); gain.connect(ctx.destination);
+            src.onended=()=>{currentCallAudio=null;resolve();};
+            src.start(0);
+            // pause用にダミー参照（BufferSourceはpauseできないのでフラグ管理）
+            currentCallAudio={pause:()=>src.stop(),currentTime:0};
+          })
+          .catch(()=>{currentCallAudio=null;resolve();});
       }else{
         currentCallAudio=null;
         const def=CALL_DEFS.find(d=>d.id===id);
@@ -886,19 +913,41 @@
     const btn=document.getElementById(`spd-${key}`); if(btn) btn.classList.add("active");
   }
 
-  let callVolume=3.0; // デフォルトMAX
-  function setVolume(vol,key){
-    callVolume=vol;
-    document.querySelectorAll(".vol-btn").forEach(b=>b.classList.remove("active"));
-    const btn=document.getElementById(key); if(btn) btn.classList.add("active");
-    localStorage.setItem("kick_volume",vol);
+  // 音量スライダー（1〜300%）
+  let callVolume=2.0;
+  function onVolumeSlider(val){
+    callVolume=parseInt(val)/100;
+    document.getElementById("volVal").textContent=val+"%";
+    localStorage.setItem("kick_volume",val);
   }
   function loadVolume(){
-    const v=parseFloat(localStorage.getItem("kick_volume")||"3.0");
-    callVolume=v;
-    const key=v<=1.0?"vol-1":v<=2.0?"vol-2":"vol-3";
-    document.querySelectorAll(".vol-btn").forEach(b=>b.classList.remove("active"));
-    const btn=document.getElementById(key); if(btn) btn.classList.add("active");
+    const v=parseInt(localStorage.getItem("kick_volume")||"200");
+    callVolume=v/100;
+    const sl=document.getElementById("volSlider"); if(sl) sl.value=v;
+    const vv=document.getElementById("volVal"); if(vv) vv.textContent=v+"%";
+  }
+
+  // 声タイプ（playbackRate + preservesPitch制御でピッチ変換）
+  // rate: 再生速度  pitch: preservesPitch=false で音程変化
+  const VOICE_TYPES={
+    self:  {rate:1.0,  pitch:true},   // 自分の声（そのまま）
+    bro:   {rate:0.88, pitch:false},  // お兄さん（少し低く・ゆっくり）
+    coach: {rate:0.75, pitch:false},  // 男コーチ（低く・力強く）
+    sis:   {rate:1.12, pitch:false},  // お姉さん（少し高く）
+    fcoach:{rate:1.25, pitch:false},  // 女コーチ（高く・鋭く）
+  };
+  let voiceType="self";
+  function setVoiceType(type){
+    voiceType=type;
+    document.querySelectorAll(".vt-btn").forEach(b=>b.classList.remove("active"));
+    const btn=document.getElementById(`vt-${type}`); if(btn) btn.classList.add("active");
+    localStorage.setItem("kick_voicetype",type);
+  }
+  function loadVoiceType(){
+    const v=localStorage.getItem("kick_voicetype")||"self";
+    voiceType=v;
+    document.querySelectorAll(".vt-btn").forEach(b=>b.classList.remove("active"));
+    const btn=document.getElementById(`vt-${v}`); if(btn) btn.classList.add("active");
   }
 
   // ============================================================
@@ -950,7 +999,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();});
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();loadVoiceType();});
 
   // ============================================================
   //  トレーニング
