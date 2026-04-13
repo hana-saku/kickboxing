@@ -254,11 +254,13 @@
       <div style="margin-top:8px">
         <div style="font-size:0.72rem;color:#aaa;margin-bottom:4px">🎙 声のタイプ（録音再生時）</div>
         <div class="voice-type-row">
-          <button class="vt-btn active" id="vt-self"   onclick="setVoiceType('self')">自分の声</button>
-          <button class="vt-btn"        id="vt-bro"    onclick="setVoiceType('bro')">👦 お兄さん</button>
-          <button class="vt-btn"        id="vt-coach"  onclick="setVoiceType('coach')">💪 男コーチ</button>
-          <button class="vt-btn"        id="vt-sis"    onclick="setVoiceType('sis')">👧 お姉さん</button>
-          <button class="vt-btn"        id="vt-fcoach" onclick="setVoiceType('fcoach')">🔥 女コーチ</button>
+          <button class="vt-btn active" id="vt-self"   onclick="setVoiceType('self'  );syncVtBtns()">自分の声</button>
+          <button class="vt-btn"        id="vt-bro"    onclick="setVoiceType('bro'   );syncVtBtns()">👦 お兄さん</button>
+          <button class="vt-btn"        id="vt-coach"  onclick="setVoiceType('coach' );syncVtBtns()">💪 男コーチ</button>
+          <button class="vt-btn"        id="vt-sis"    onclick="setVoiceType('sis'   );syncVtBtns()">👧 お姉さん</button>
+          <button class="vt-btn"        id="vt-fcoach" onclick="setVoiceType('fcoach');syncVtBtns()">🔥 女コーチ</button>
+          <button class="vt-btn"        id="vt-impact" onclick="setVoiceType('impact');syncVtBtns()">🥊 迫力</button>
+          <button class="vt-btn"        id="vt-clear"  onclick="setVoiceType('clear' );syncVtBtns()">✨ 滑舌補正</button>
         </div>
       </div>
     </div>
@@ -333,6 +335,18 @@
   <!-- ===== 録音タブ ===== -->
   <div id="recSection" style="display:none">
     <p class="rec-title">各コールを<strong>1回だけ</strong>録音してください。<br>録音した声がトレーニング中に自動リピートされます。</p>
+    <div style="background:#16213e;border:1px solid #0f3460;border-radius:12px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:0.75rem;color:#aaa;margin-bottom:6px">🎙 声のタイプ（▶確認ボタンで試し聴きできます）</div>
+      <div class="voice-type-row">
+        <button class="vt-btn active" id="vt-self-r"   onclick="setVoiceType('self'  );syncVtBtns()">自分の声</button>
+        <button class="vt-btn"        id="vt-bro-r"    onclick="setVoiceType('bro'   );syncVtBtns()">👦 お兄さん</button>
+        <button class="vt-btn"        id="vt-coach-r"  onclick="setVoiceType('coach' );syncVtBtns()">💪 男コーチ</button>
+        <button class="vt-btn"        id="vt-sis-r"    onclick="setVoiceType('sis'   );syncVtBtns()">👧 お姉さん</button>
+        <button class="vt-btn"        id="vt-fcoach-r" onclick="setVoiceType('fcoach');syncVtBtns()">🔥 女コーチ</button>
+        <button class="vt-btn"        id="vt-impact-r" onclick="setVoiceType('impact');syncVtBtns()">🥊 迫力</button>
+        <button class="vt-btn"        id="vt-clear-r"  onclick="setVoiceType('clear' );syncVtBtns()">✨ 滑舌補正</button>
+      </div>
+    </div>
 
     <div class="rec-section-title">▼ ゴング音</div>
     <div id="bellRow" class="rec-row" style="border-color:#f0c040">
@@ -832,9 +846,7 @@
   function playCallId(id){
     return new Promise(resolve=>{
       if(recBlobUrls[id]){
-        // 録音音声：声タイプ＋音量をWeb Audio APIで適用
-        const vt=VOICE_TYPES[voiceType]||VOICE_TYPES.self;
-        const rate=speechRate*(vt.rate);
+        // 録音音声：EQフィルター＋音量をWeb Audio APIで適用
         fetch(recBlobUrls[id])
           .then(r=>r.arrayBuffer())
           .then(ab=>{
@@ -845,16 +857,13 @@
             const ctx=getCtx();
             const src=ctx.createBufferSource();
             src.buffer=buffer;
-            // 声タイプ：preservesPitch=falseでピッチも変わる
-            src.playbackRate.value=rate;
-            // 音量ゲイン
+            src.playbackRate.value=speechRate; // 速さのみ（声タイプはEQで）
             const gain=ctx.createGain();
             gain.gain.value=callVolume;
-            src.connect(gain); gain.connect(ctx.destination);
+            applyVoiceFilters(ctx, src, gain); // EQフィルター適用
             src.onended=()=>{currentCallAudio=null;resolve();};
             src.start(0);
-            // pause用にダミー参照（BufferSourceはpauseできないのでフラグ管理）
-            currentCallAudio={pause:()=>src.stop(),currentTime:0};
+            currentCallAudio={pause:()=>{ try{src.stop();}catch(e){} },currentTime:0};
           })
           .catch(()=>{currentCallAudio=null;resolve();});
       }else{
@@ -927,27 +936,80 @@
     const vv=document.getElementById("volVal"); if(vv) vv.textContent=v+"%";
   }
 
-  // 声タイプ（playbackRate + preservesPitch制御でピッチ変換）
-  // rate: 再生速度  pitch: preservesPitch=false で音程変化
+  // 声タイプ（EQフィルターで音色変換・速度変えず自然に）
+  // filters: [{type, freq, gain, Q}] の配列で重ねがけ
   const VOICE_TYPES={
-    self:  {rate:1.0,  pitch:true},   // 自分の声（そのまま）
-    bro:   {rate:0.88, pitch:false},  // お兄さん（少し低く・ゆっくり）
-    coach: {rate:0.75, pitch:false},  // 男コーチ（低く・力強く）
-    sis:   {rate:1.12, pitch:false},  // お姉さん（少し高く）
-    fcoach:{rate:1.25, pitch:false},  // 女コーチ（高く・鋭く）
+    self:{filters:[]}, // そのまま
+    bro:{ // お兄さん：低音ブースト＋高音カット → 落ち着いた声
+      filters:[
+        {type:"lowshelf",  freq:300,  gain:6},
+        {type:"highshelf", freq:4000, gain:-4},
+      ]
+    },
+    coach:{ // 男コーチ：強い低音＋中域カット＋圧縮感
+      filters:[
+        {type:"lowshelf",  freq:200,  gain:10},
+        {type:"peaking",   freq:1000, gain:-5, Q:1},
+        {type:"highshelf", freq:5000, gain:-6},
+      ]
+    },
+    sis:{ // お姉さん：高音ブースト＋低音カット → 明るい声
+      filters:[
+        {type:"highshelf", freq:3000, gain:6},
+        {type:"lowshelf",  freq:300,  gain:-4},
+      ]
+    },
+    fcoach:{ // 女コーチ：鋭い高音＋中高域ブースト
+      filters:[
+        {type:"highshelf", freq:2000, gain:8},
+        {type:"peaking",   freq:1200, gain:4, Q:1.5},
+        {type:"lowshelf",  freq:400,  gain:-6},
+      ]
+    },
+    impact:{ // 迫力：低音ドン＋中音カット＋高音シャリシャリ（キックボクシング向け）
+      filters:[
+        {type:"lowshelf",  freq:150,  gain:12},
+        {type:"peaking",   freq:500,  gain:-6, Q:1},
+        {type:"peaking",   freq:3000, gain:5,  Q:1},
+        {type:"highshelf", freq:6000, gain:4},
+      ]
+    },
+    clear:{ // 滑舌補正：子音が聞き取りやすくなる中高域ブースト＋低音スッキリ
+      filters:[
+        {type:"highpass",  freq:120,  gain:0},
+        {type:"peaking",   freq:2500, gain:7, Q:1},
+        {type:"peaking",   freq:5000, gain:4, Q:1.5},
+        {type:"highshelf", freq:8000, gain:3},
+      ]
+    },
   };
+
+  function applyVoiceFilters(ctx, src, gain){
+    const vt=VOICE_TYPES[voiceType]||VOICE_TYPES.self;
+    if(!vt.filters||vt.filters.length===0){
+      src.connect(gain); gain.connect(ctx.destination); return;
+    }
+    let node=src;
+    vt.filters.forEach(f=>{
+      const bq=ctx.createBiquadFilter();
+      bq.type=f.type; bq.frequency.value=f.freq; bq.gain.value=f.gain||0;
+      if(f.Q) bq.Q.value=f.Q;
+      node.connect(bq); node=bq;
+    });
+    node.connect(gain); gain.connect(ctx.destination);
+  }
+
   let voiceType="self";
-  function setVoiceType(type){
-    voiceType=type;
+  function setVoiceType(type){ voiceType=type; localStorage.setItem("kick_voicetype",type); }
+  function syncVtBtns(){
     document.querySelectorAll(".vt-btn").forEach(b=>b.classList.remove("active"));
-    const btn=document.getElementById(`vt-${type}`); if(btn) btn.classList.add("active");
-    localStorage.setItem("kick_voicetype",type);
+    [`vt-${voiceType}`,`vt-${voiceType}-r`].forEach(id=>{
+      const btn=document.getElementById(id); if(btn) btn.classList.add("active");
+    });
   }
   function loadVoiceType(){
-    const v=localStorage.getItem("kick_voicetype")||"self";
-    voiceType=v;
-    document.querySelectorAll(".vt-btn").forEach(b=>b.classList.remove("active"));
-    const btn=document.getElementById(`vt-${v}`); if(btn) btn.classList.add("active");
+    voiceType=localStorage.getItem("kick_voicetype")||"self";
+    syncVtBtns();
   }
 
   // ============================================================
