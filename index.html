@@ -822,27 +822,28 @@
   function playCallId(id){
     return new Promise(resolve=>{
       if(recBlobUrls[id]){
-        // 録音音声：EQフィルター＋音量をWeb Audio APIで適用
-        fetch(recBlobUrls[id])
-          .then(r=>r.arrayBuffer())
-          .then(ab=>{
-            const ctx=getCtx(); if(ctx.state==="suspended") ctx.resume();
-            return ctx.decodeAudioData(ab);
-          })
-          .then(buffer=>{
-            const ctx=getCtx();
-            const src=ctx.createBufferSource();
-            src.buffer=buffer;
-            src.playbackRate.value=speechRate;
-            src.detune.value=0; // ピッチ固定（速度が変わっても音程変わらない）
-            const gain=ctx.createGain();
-            gain.gain.value=callVolume;
-            applyClearFilter(ctx, src, gain); // 滑舌補正を常時適用
-            src.onended=()=>{currentCallAudio=null;resolve();};
-            src.start(0);
-            currentCallAudio={pause:()=>{ try{src.stop();}catch(e){} },currentTime:0};
-          })
-          .catch(()=>{currentCallAudio=null;resolve();});
+        // new Audio() で再生 → preservesPitch=true でピッチ固定
+        const a = new Audio(recBlobUrls[id]);
+        a.playbackRate = speechRate;
+        // ブラウザ内蔵ピッチ補正（速度変えても音程変わらない）
+        a.preservesPitch = true;
+        a.mozPreservesPitch = true;
+        a.webkitPreservesPitch = true;
+        currentCallAudio = a;
+        // Web Audio API で音量＋滑舌補正フィルターをかける
+        try {
+          const ctx = getCtx(); if(ctx.state==="suspended") ctx.resume();
+          const src = ctx.createMediaElementSource(a);
+          const gain = ctx.createGain();
+          gain.gain.value = callVolume;
+          applyClearFilter(ctx, src, gain);
+        } catch(e) {
+          // MediaElementSource は1要素1回限り。2回目以降はそのまま再生
+          a.volume = Math.min(1.0, callVolume);
+        }
+        a.onended = ()=>{ currentCallAudio=null; resolve(); };
+        a.onerror = ()=>{ currentCallAudio=null; resolve(); };
+        a.play().catch(()=>{ currentCallAudio=null; resolve(); });
       }else{
         currentCallAudio=null;
         const def=CALL_DEFS.find(d=>d.id===id);
