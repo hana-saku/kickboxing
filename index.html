@@ -216,7 +216,7 @@
       <div class="settings-grid">
         <div class="setting-item">
           <label>ラウンド数</label>
-          <input class="setting-input" id="roundsInput" type="number" min="1" max="20" value="3"
+          <input class="setting-input" id="roundsInput" type="number" min="1" max="99" value="3"
             oninput="onSettingChange()">
           <div class="setting-unit">回</div>
         </div>
@@ -890,6 +890,41 @@
     return playEnglish("Interval");
   }
 
+  // インターバル中のアナウンス
+  // ・10分以上残り → 10分おきに "Interval"
+  // ・10分切ったら → 残り5分・3分・1分・30秒をアナウンス
+  // ・10秒以下 → 残り10秒→5・4・3・2・1→ラウンド〇→ゴング
+  function announceRestTime(t, restSec, nextRound){
+    if(!running||!isResting) return;
+
+    function speakJP(text){
+      synth.cancel();
+      synth.speak(makeUtter(text));
+    }
+    function speakEN(text){
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang="en-US"; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+      const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
+      if(enV) u.voice=enV;
+      synth.cancel(); synth.speak(u);
+    }
+
+    // カウントダウン 5〜1
+    if(t>=1 && t<=5){ speakJP(String(t)); return; }
+    // 残り10秒
+    if(t===10){ speakJP("残り10秒"); return; }
+    // 残り30秒
+    if(t===30 && restSec>30){ speakJP("残り30秒"); return; }
+    // 残り1分
+    if(t===60 && restSec>60){ speakJP("残り1分"); return; }
+    // 残り3分
+    if(t===180 && restSec>180){ speakJP("残り3分"); return; }
+    // 残り5分
+    if(t===300 && restSec>300){ speakJP("残り5分"); return; }
+    // 10分おきに "Interval"（10分以上残っているとき）
+    if(t>600 && t%600===0){ speakEN("Interval"); return; }
+  }
+
   // ============================================================
   //  速さ・音量
   // ============================================================
@@ -1017,7 +1052,7 @@
     localStorage.setItem("kick_rest",getRestSec());
     if(!running) updateTimerDisplay();
   }
-  function getRounds(){return Math.max(1,Math.min(20,parseInt(document.getElementById("roundsInput").value)||3));}
+  function getRounds(){return Math.max(1,Math.min(99,parseInt(document.getElementById("roundsInput").value)||3));}
   function getWorkSec(){
     const m=Math.max(0,Math.min(99,parseInt(document.getElementById("workMinInput").value)||0));
     const s=Math.max(0,Math.min(59,parseInt(document.getElementById("workSecInput").value)||0));
@@ -1197,18 +1232,7 @@
         timerInterval=setInterval(()=>{
           timeLeft--;
           document.getElementById("timerDisplay").textContent=formatTime(timeLeft);
-          if(timeLeft===10 && restSec>10){
-            // 残り10秒アナウンス（日本語）
-            synth.cancel();
-            synth.speak(makeUtter("残り10秒"));
-          } else if(timeLeft>10 && timeLeft%10===0){
-            // 10秒おきに "Interval"（英語）
-            const u=new SpeechSynthesisUtterance("Interval");
-            u.lang="en-US"; u.rate=0.88; u.pitch=1.0; u.volume=1.0;
-            const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
-            if(enV) u.voice=enV;
-            synth.cancel(); synth.speak(u);
-          }
+          announceRestTime(timeLeft, restSec, currentRound+1);
           if(timeLeft<=0){clearInterval(timerInterval);currentRound++;startRound();}
         },1000);
       }
