@@ -1246,6 +1246,22 @@
     running=true; currentRound=1; shuffleQueue=[];
     document.getElementById("startBtn").disabled=true;
     document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="none");
+
+    // 10秒カウントダウン
+    document.getElementById("status").textContent="まもなく開始...";
+    for(let i=10; i>=1; i--){
+      if(!running) return;
+      document.getElementById("timerDisplay").textContent=String(i);
+      document.getElementById("currentCall").textContent="▶ "+i;
+      await new Promise(res=>{
+        synth.cancel();
+        const u=makeUtter(String(i));
+        u.onend=u.onerror=()=>setTimeout(res,80);
+        synth.speak(u);
+      });
+    }
+    if(!running) return;
+    document.getElementById("currentCall").textContent="";
     await startRound();
   }
 
