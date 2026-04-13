@@ -74,6 +74,13 @@
       cursor: pointer; transition: all 0.2s;
     }
     .spd-btn.active { border-color: #f0c040; color: #f0c040; background: #0d1b2a; }
+    .vol-row { display: flex; gap: 6px; margin-top: 6px; }
+    .vol-btn {
+      flex: 1; padding: 8px 0; border-radius: 8px; border: 2px solid #0f3460;
+      background: #0d1b2a; color: #aaa; font-size: 0.78rem; font-weight: bold;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .vol-btn.active { border-color: #2ecc71; color: #2ecc71; background: #0d1b2a; }
 
     /* スタート/ストップ */
     .controls { display: flex; gap: 14px; justify-content: center; margin-bottom: 10px; }
@@ -232,6 +239,11 @@
         <button class="spd-btn active" id="spd-normal" onclick="setSpeechRate(1.0,'普通','normal')">普通</button>
         <button class="spd-btn" id="spd-fast"   onclick="setSpeechRate(1.4,'🔥 速い','fast')">🔥 速い</button>
         <button class="spd-btn" id="spd-vfast"  onclick="setSpeechRate(1.8,'⚡ 激速','vfast')">⚡ 激速</button>
+      </div>
+      <div class="vol-row">
+        <button class="vol-btn" id="vol-1" onclick="setVolume(1.0,'vol-1')">🔈 普通</button>
+        <button class="vol-btn" id="vol-2" onclick="setVolume(2.0,'vol-2')">🔊 大きい</button>
+        <button class="vol-btn active" id="vol-3" onclick="setVolume(3.0,'vol-3')">📢 MAX</button>
       </div>
     </div>
 
@@ -783,7 +795,7 @@
   function getJpVoice(){return voices.find(v=>v.lang==="ja-JP")||voices.find(v=>v.lang.startsWith("ja"))||voices[0];}
   function makeUtter(word){
     const u=new SpeechSynthesisUtterance(word);
-    u.lang="ja-JP"; u.rate=1.1*speechRate; u.pitch=1.2; u.volume=1.0;
+    u.lang="ja-JP"; u.rate=1.1*speechRate; u.pitch=1.2; u.volume=Math.min(1.0,callVolume);
     const v=getJpVoice(); if(v) u.voice=v; return u;
   }
   let currentCallAudio = null;    // 再生中の録音音声
@@ -808,6 +820,13 @@
         currentCallAudio=a;
         a.playbackRate=speechRate; a.preservesPitch=true;
         a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
+        // Web Audio API で音量増幅
+        try{
+          const ctx=getCtx(); if(ctx.state==="suspended") ctx.resume();
+          const src=ctx.createMediaElementSource(a);
+          const gain=ctx.createGain(); gain.gain.value=callVolume;
+          src.connect(gain); gain.connect(ctx.destination);
+        }catch(e){ a.volume=Math.min(1.0,callVolume); }
         a.onended=()=>{currentCallAudio=null;resolve();};
         a.onerror=()=>{currentCallAudio=null;resolve();};
         a.play();
@@ -858,13 +877,28 @@
   }
 
   // ============================================================
-  //  速さ
+  //  速さ・音量
   // ============================================================
   let speechRate=1.0;
   function setSpeechRate(rate,label,key){
     speechRate=rate;
     document.querySelectorAll(".spd-btn").forEach(b=>b.classList.remove("active"));
     const btn=document.getElementById(`spd-${key}`); if(btn) btn.classList.add("active");
+  }
+
+  let callVolume=3.0; // デフォルトMAX
+  function setVolume(vol,key){
+    callVolume=vol;
+    document.querySelectorAll(".vol-btn").forEach(b=>b.classList.remove("active"));
+    const btn=document.getElementById(key); if(btn) btn.classList.add("active");
+    localStorage.setItem("kick_volume",vol);
+  }
+  function loadVolume(){
+    const v=parseFloat(localStorage.getItem("kick_volume")||"3.0");
+    callVolume=v;
+    const key=v<=1.0?"vol-1":v<=2.0?"vol-2":"vol-3";
+    document.querySelectorAll(".vol-btn").forEach(b=>b.classList.remove("active"));
+    const btn=document.getElementById(key); if(btn) btn.classList.add("active");
   }
 
   // ============================================================
@@ -916,7 +950,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();});
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();});
 
   // ============================================================
   //  トレーニング
