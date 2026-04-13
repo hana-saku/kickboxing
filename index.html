@@ -251,18 +251,6 @@
         <input class="vol-slider" id="volSlider" type="range" min="1" max="300" value="200" oninput="onVolumeSlider(this.value)">
         <span class="vol-val" id="volVal">200%</span>
       </div>
-      <div style="margin-top:8px">
-        <div style="font-size:0.72rem;color:#aaa;margin-bottom:4px">🎙 声のタイプ（録音再生時）</div>
-        <div class="voice-type-row">
-          <button class="vt-btn active" id="vt-self"   onclick="setVoiceType('self'  );syncVtBtns()">自分の声</button>
-          <button class="vt-btn"        id="vt-bro"    onclick="setVoiceType('bro'   );syncVtBtns()">👦 お兄さん</button>
-          <button class="vt-btn"        id="vt-coach"  onclick="setVoiceType('coach' );syncVtBtns()">💪 男コーチ</button>
-          <button class="vt-btn"        id="vt-sis"    onclick="setVoiceType('sis'   );syncVtBtns()">👧 お姉さん</button>
-          <button class="vt-btn"        id="vt-fcoach" onclick="setVoiceType('fcoach');syncVtBtns()">🔥 女コーチ</button>
-          <button class="vt-btn"        id="vt-impact" onclick="setVoiceType('impact');syncVtBtns()">🥊 迫力</button>
-          <button class="vt-btn"        id="vt-clear"  onclick="setVoiceType('clear' );syncVtBtns()">✨ 滑舌補正</button>
-        </div>
-      </div>
     </div>
 
     <div class="controls">
@@ -335,18 +323,6 @@
   <!-- ===== 録音タブ ===== -->
   <div id="recSection" style="display:none">
     <p class="rec-title">各コールを<strong>1回だけ</strong>録音してください。<br>録音した声がトレーニング中に自動リピートされます。</p>
-    <div style="background:#16213e;border:1px solid #0f3460;border-radius:12px;padding:12px 14px;margin-bottom:14px">
-      <div style="font-size:0.75rem;color:#aaa;margin-bottom:6px">🎙 声のタイプ（▶確認ボタンで試し聴きできます）</div>
-      <div class="voice-type-row">
-        <button class="vt-btn active" id="vt-self-r"   onclick="setVoiceType('self'  );syncVtBtns()">自分の声</button>
-        <button class="vt-btn"        id="vt-bro-r"    onclick="setVoiceType('bro'   );syncVtBtns()">👦 お兄さん</button>
-        <button class="vt-btn"        id="vt-coach-r"  onclick="setVoiceType('coach' );syncVtBtns()">💪 男コーチ</button>
-        <button class="vt-btn"        id="vt-sis-r"    onclick="setVoiceType('sis'   );syncVtBtns()">👧 お姉さん</button>
-        <button class="vt-btn"        id="vt-fcoach-r" onclick="setVoiceType('fcoach');syncVtBtns()">🔥 女コーチ</button>
-        <button class="vt-btn"        id="vt-impact-r" onclick="setVoiceType('impact');syncVtBtns()">🥊 迫力</button>
-        <button class="vt-btn"        id="vt-clear-r"  onclick="setVoiceType('clear' );syncVtBtns()">✨ 滑舌補正</button>
-      </div>
-    </div>
 
     <div class="rec-section-title">▼ ゴング音</div>
     <div id="bellRow" class="rec-row" style="border-color:#f0c040">
@@ -857,10 +833,11 @@
             const ctx=getCtx();
             const src=ctx.createBufferSource();
             src.buffer=buffer;
-            src.playbackRate.value=speechRate; // 速さのみ（声タイプはEQで）
+            src.playbackRate.value=speechRate;
+            src.detune.value=0; // ピッチ固定（速度が変わっても音程変わらない）
             const gain=ctx.createGain();
             gain.gain.value=callVolume;
-            applyVoiceFilters(ctx, src, gain); // EQフィルター適用
+            applyClearFilter(ctx, src, gain); // 滑舌補正を常時適用
             src.onended=()=>{currentCallAudio=null;resolve();};
             src.start(0);
             currentCallAudio={pause:()=>{ try{src.stop();}catch(e){} },currentTime:0};
@@ -984,32 +961,23 @@
     },
   };
 
-  function applyVoiceFilters(ctx, src, gain){
-    const vt=VOICE_TYPES[voiceType]||VOICE_TYPES.self;
-    if(!vt.filters||vt.filters.length===0){
-      src.connect(gain); gain.connect(ctx.destination); return;
-    }
+  // 滑舌補正フィルターを常時適用（子音を際立たせ聞き取りやすくする）
+  function applyClearFilter(ctx, src, gain){
+    const filters=[
+      {type:"highpass",  freq:120},
+      {type:"peaking",   freq:2500, gain:7, Q:1},
+      {type:"peaking",   freq:5000, gain:4, Q:1.5},
+      {type:"highshelf", freq:8000, gain:3},
+    ];
     let node=src;
-    vt.filters.forEach(f=>{
+    filters.forEach(f=>{
       const bq=ctx.createBiquadFilter();
-      bq.type=f.type; bq.frequency.value=f.freq; bq.gain.value=f.gain||0;
+      bq.type=f.type; bq.frequency.value=f.freq;
+      if(f.gain!==undefined) bq.gain.value=f.gain;
       if(f.Q) bq.Q.value=f.Q;
       node.connect(bq); node=bq;
     });
     node.connect(gain); gain.connect(ctx.destination);
-  }
-
-  let voiceType="self";
-  function setVoiceType(type){ voiceType=type; localStorage.setItem("kick_voicetype",type); }
-  function syncVtBtns(){
-    document.querySelectorAll(".vt-btn").forEach(b=>b.classList.remove("active"));
-    [`vt-${voiceType}`,`vt-${voiceType}-r`].forEach(id=>{
-      const btn=document.getElementById(id); if(btn) btn.classList.add("active");
-    });
-  }
-  function loadVoiceType(){
-    voiceType=localStorage.getItem("kick_voicetype")||"self";
-    syncVtBtns();
   }
 
   // ============================================================
@@ -1061,7 +1029,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();loadVoiceType();});
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();});
 
   // ============================================================
   //  トレーニング
