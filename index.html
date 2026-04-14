@@ -909,8 +909,8 @@
       synth.cancel(); synth.speak(u);
     }
 
-    // カウントダウン 5〜1
-    if(t>=1 && t<=5){ speakJP(String(t)); return; }
+    // カウントダウン 5〜1（英語）
+    if(t>=1 && t<=5){ speakEN(String(t)); return; }
     // 残り10秒
     if(t===10){ speakJP("残り10秒"); return; }
     // 残り30秒
