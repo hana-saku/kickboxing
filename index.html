@@ -1029,6 +1029,7 @@
       if(randEnabled["maegeri"]!==false) list.push("maegeri");
       if(randEnabled["upper"]!==false)   list.push("upper");
       CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
+      SINGLE_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
       return list.length>0?list:["wantwo"];
     }
     return MODES[mode]||[mode];
