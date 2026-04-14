@@ -1255,7 +1255,10 @@
       document.getElementById("currentCall").textContent="▶ "+i;
       await new Promise(res=>{
         synth.cancel();
-        const u=makeUtter(String(i));
+        const u=new SpeechSynthesisUtterance(String(i));
+        u.lang="en-US"; u.rate=0.9; u.pitch=1.0; u.volume=1.0;
+        const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
+        if(enV) u.voice=enV;
         u.onend=u.onerror=()=>setTimeout(res,80);
         synth.speak(u);
       });
