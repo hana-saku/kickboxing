@@ -381,7 +381,7 @@
     { id:"maegeri", label:"前蹴り！",                   display:"前蹴り！",                  ttsWords:["まえげり"] },
     { id:"upper",   label:"アッパー！",                 display:"アッパー！",                ttsWords:["アッパー"] },
   ];
-  const CUSTOM_COUNT = 6;
+  const CUSTOM_COUNT = 24;
   const CUSTOM_IDS   = Array.from({length:CUSTOM_COUNT},(_,i)=>`custom${i+1}`);
   const CUSTOM_DEFS  = CUSTOM_IDS.map((id,i)=>({
     id, label:`カスタム${i+1}`, display:`カスタム${i+1}`, ttsWords:[`カスタム${i+1}`], isCustom:true
@@ -535,10 +535,15 @@
   // ランダム選択
   const BASE_MODES_FOR_RAND=["wantwo","combo","middle","maegeri","upper"];
   const randEnabled={};
+  const lowFreqEnabled={};
   function toggleRandom(key,checked){
     randEnabled[key]=checked; localStorage.setItem(LR+key,checked?"1":"0");
     const lbl=document.getElementById(`randLabel-${key}`);
     if(lbl) lbl.classList.toggle("checked",checked);
+  }
+  function toggleLowFreq(key,checked){
+    lowFreqEnabled[key]=checked;
+    localStorage.setItem("kick_lowfreq_"+key,checked?"1":"0");
   }
   function loadRandSettings(){
     BASE_MODES_FOR_RAND.forEach(key=>{
@@ -553,6 +558,9 @@
       const cb=document.getElementById(`rand-${key}`);
       const lbl=document.getElementById(`randLabel-${key}`);
       if(cb) cb.checked=v; if(lbl) lbl.classList.toggle("checked",v);
+      const lf=localStorage.getItem("kick_lowfreq_"+key)==="1"; lowFreqEnabled[key]=lf;
+      const lfCb=document.getElementById(`lowfreq-${key}`);
+      if(lfCb) lfCb.checked=lf;
     });
     SINGLE_IDS.forEach(key=>{
       const v=localStorage.getItem(LR+key)==="1"; randEnabled[key]=v;
@@ -638,6 +646,9 @@
         <span class="rec-mark" id="mark-${def.id}">⚪ 未録音</span>
         <label class="rand-toggle" id="randLabel-${def.id}" onclick="event.stopPropagation()">
           <input type="checkbox" id="rand-${def.id}" onchange="toggleRandom('${def.id}',this.checked)">ランダムに含める
+        </label>
+        <label class="rand-toggle" style="font-size:0.7rem;opacity:0.75" onclick="event.stopPropagation()">
+          <input type="checkbox" id="lowfreq-${def.id}" onchange="toggleLowFreq('${def.id}',this.checked)">少なめ
         </label>`;
       c.appendChild(btn);
     });
@@ -1028,7 +1039,7 @@
       if(randEnabled["middle"]!==false)  list.push("migi","hidari");
       if(randEnabled["maegeri"]!==false) list.push("maegeri");
       if(randEnabled["upper"]!==false)   list.push("upper");
-      CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
+      CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id]){list.push(id);if(!lowFreqEnabled[id])list.push(id);}});
       SINGLE_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
       return list.length>0?list:["wantwo"];
     }
