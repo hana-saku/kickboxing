@@ -79,6 +79,15 @@
     .vol-row label { font-size: 0.75rem; color: #aaa; white-space: nowrap; }
     .vol-slider { flex: 1; accent-color: #2ecc71; height: 6px; cursor: pointer; }
     .vol-val { font-size: 0.78rem; color: #2ecc71; font-weight: bold; min-width: 36px; text-align: right; }
+    /* コーチ音声 */
+    .coach-row { margin-top: 10px; }
+    .coach-btns { display: flex; gap: 6px; margin-top: 6px; }
+    .coach-btn { flex: 1; padding: 9px 4px; border-radius: 10px; border: 2px solid #0f3460; background: #0d1b2a; color: #aaa; font-size: 0.82rem; font-weight: bold; cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.6; }
+    .coach-btn:hover { border-color: #e94560; color: #fff; }
+    .coach-btn.active { border-color: #f0c040; color: #f0c040; }
+    .coach-btn.has-data { border-color: #1a6b3a; }
+    .coach-btn.has-data.active { border-color: #2ecc71; color: #2ecc71; background: #0a2018; }
+
     /* 声タイプ */
     .voice-type-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
     .vt-btn {
@@ -250,6 +259,14 @@
         <label>🔊 音量</label>
         <input class="vol-slider" id="volSlider" type="range" min="1" max="300" value="200" oninput="onVolumeSlider(this.value)">
         <span class="vol-val" id="volVal">200%</span>
+      </div>
+      <div class="coach-row">
+        <label style="font-size:0.75rem;color:#aaa;display:block;margin-bottom:2px">コーチ音声</label>
+        <div class="coach-btns">
+          <button class="coach-btn" id="coach-female" onclick="selectCoach('female')">👩 女性<br>コーチ</button>
+          <button class="coach-btn" id="coach-male" onclick="selectCoach('male')">💪 男性<br>コーチ</button>
+          <button class="coach-btn" id="coach-strict" onclick="selectCoach('strict')">🔥 厳しめ<br>コーチ</button>
+        </div>
       </div>
     </div>
 
@@ -682,9 +699,14 @@
   // 復元
   async function restoreAllFromStorage(){
     loadCustomLabels(); loadAllDelays(); loadRandSettings();
+    // コーチ音声を先にロード
+    selectedCoach=localStorage.getItem("kick_coach")||"none";
+    if(selectedCoach!=="none") await loadCoachAudio();
+    initCoachButtons();
     // ゴング音を復元
     const bellOk=await loadFromStorage("bell");
     if(bellOk) onRecordDone("bell",true);
+    // ユーザー録音（コーチ音声を上書き）
     for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
   }
   let restored=false;
@@ -775,7 +797,11 @@
   function updateVoiceBadge(){
     const done=CALL_DEFS.filter(d=>recBlobUrls[d.id]).length;
     const b=document.getElementById("voiceBadge");
-    b.innerHTML=done===0?"声: AIの声":`声: <span>自分の声（${done}コール録音済み）</span>`;
+    const coachNames={female:"女性コーチ",male:"男性コーチ",strict:"厳しめコーチ"};
+    if(done===0){b.innerHTML="声: AIの声";return;}
+    const cname=coachNames[selectedCoach];
+    if(cname) b.innerHTML=`声: <span>${cname}（${done}コール）</span>`;
+    else b.innerHTML=`声: <span>自分の声（${done}コール録音済み）</span>`;
   }
   function updateModeButtons(){
     document.querySelectorAll("#baseModes .mode-btn").forEach(btn=>{
@@ -960,6 +986,51 @@
     const vv=document.getElementById("volVal"); if(vv) vv.textContent=v+"%";
   }
 
+  // ============================================================
+  //  コーチ音声システム
+  // ============================================================
+  const COACH_PREFIXES={female:"kick_coach_f_",male:"kick_coach_m_",strict:"kick_coach_s_"};
+  let selectedCoach="none";
+
+  function initCoachButtons(){
+    document.querySelectorAll(".coach-btn").forEach(b=>{
+      b.classList.remove("active");
+      const type=b.id.replace("coach-","");
+      const prefix=COACH_PREFIXES[type];
+      const hasData=prefix&&localStorage.getItem(prefix+"custom1")!==null;
+      b.classList.toggle("has-data",hasData);
+    });
+    const btn=document.getElementById("coach-"+selectedCoach);
+    if(btn) btn.classList.add("active");
+  }
+
+  async function selectCoach(type){
+    selectedCoach=type;
+    localStorage.setItem("kick_coach",type);
+    await loadCoachAudio();
+    initCoachButtons();
+    updateModeButtons();
+    updateVoiceBadge();
+  }
+
+  async function loadCoachAudio(){
+    const prefix=COACH_PREFIXES[selectedCoach];
+    for(const def of CUSTOM_DEFS){
+      const userRec=localStorage.getItem(LP+def.id);
+      if(userRec) continue; // ユーザー録音優先
+      const b64=prefix?localStorage.getItem(prefix+def.id):null;
+      if(recBlobUrls[def.id]){URL.revokeObjectURL(recBlobUrls[def.id]);delete recBlobUrls[def.id];}
+      delete recBuffers[def.id];
+      if(!b64) continue;
+      try{
+        const ab=b642buf(b64);
+        const blob=new Blob([ab],{type:"audio/mpeg"});
+        recBlobUrls[def.id]=URL.createObjectURL(blob);
+        try{recBuffers[def.id]=await getCtx().decodeAudioData(ab.slice(0));}catch(e){}
+      }catch(e){}
+    }
+  }
+
   // 声タイプ（EQフィルターで音色変換・速度変えず自然に）
   // filters: [{type, freq, gain, Q}] の配列で重ねがけ
   const VOICE_TYPES={
@@ -1077,7 +1148,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();});
+  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();selectedCoach=localStorage.getItem("kick_coach")||"none";initCoachButtons();});
 
   // ============================================================
   //  トレーニング
