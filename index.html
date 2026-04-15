@@ -1039,7 +1039,7 @@
       if(randEnabled["middle"]!==false)  list.push("migi","hidari");
       if(randEnabled["maegeri"]!==false) list.push("maegeri");
       if(randEnabled["upper"]!==false)   list.push("upper");
-      CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id]){list.push(id);if(!lowFreqEnabled[id])list.push(id);}});
+      CUSTOM_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id]){const n=lowFreqEnabled[id]?1:5;for(let t=0;t<n;t++)list.push(id);}});
       SINGLE_IDS.forEach(id=>{if(randEnabled[id]&&recBlobUrls[id])list.push(id);});
       return list.length>0?list:["wantwo"];
     }
