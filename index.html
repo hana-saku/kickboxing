@@ -1148,7 +1148,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();selectedCoach=localStorage.getItem("kick_coach")||"none";initCoachButtons();});
+  window.addEventListener("DOMContentLoaded",async ()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();selectedCoach=localStorage.getItem("kick_coach")||"none";initCoachButtons();await ensureRestored();});
 
   // ============================================================
   //  トレーニング
