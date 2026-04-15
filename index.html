@@ -1038,7 +1038,9 @@
       if(!COACH_VOICE_LABELS[def.id]) continue; // custom1-21のみ対象
       const userRec=localStorage.getItem(LP+def.id);
       if(userRec) continue; // ユーザー録音優先
-      if(recBlobUrls[def.id]){URL.revokeObjectURL(recBlobUrls[def.id]);delete recBlobUrls[def.id];}
+      // 既存のblob URLを解放
+      if(recBlobUrls[def.id]&&recBlobUrls[def.id].startsWith('blob:')) URL.revokeObjectURL(recBlobUrls[def.id]);
+      delete recBlobUrls[def.id];
       delete recBuffers[def.id];
       // まずlocalStorageキャッシュを試みる
       const b64=prefix?localStorage.getItem(prefix+def.id):null;
@@ -1051,16 +1053,10 @@
           continue;
         }catch(e){}
       }
-      // fallback: voices/ディレクトリのMP3ファイルからfetch
+      // fallback: voicesディレクトリのファイルパスを直接セット（fetchなし）
+      // new Audio(path)はローカルファイルでも動作する
       if(!fileKey) continue;
-      try{
-        const resp=await fetch(`./voices/coach_${fileKey}_${def.id}.mp3`);
-        if(!resp.ok) continue;
-        const ab=await resp.arrayBuffer();
-        const blob=new Blob([ab.slice(0)],{type:"audio/mpeg"});
-        recBlobUrls[def.id]=URL.createObjectURL(blob);
-        try{recBuffers[def.id]=await getCtx().decodeAudioData(ab);}catch(e){}
-      }catch(e){}
+      recBlobUrls[def.id]=`./voices/coach_${fileKey}_${def.id}.mp3`;
     }
   }
 
