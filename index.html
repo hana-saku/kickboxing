@@ -79,14 +79,6 @@
     .vol-row label { font-size: 0.75rem; color: #aaa; white-space: nowrap; }
     .vol-slider { flex: 1; accent-color: #2ecc71; height: 6px; cursor: pointer; }
     .vol-val { font-size: 0.78rem; color: #2ecc71; font-weight: bold; min-width: 36px; text-align: right; }
-    /* コーチ音声 */
-    .coach-row { margin-top: 10px; }
-    .coach-btns { display: flex; gap: 6px; margin-top: 6px; }
-    .coach-btn { flex: 1; padding: 9px 4px; border-radius: 10px; border: 2px solid #0f3460; background: #0d1b2a; color: #aaa; font-size: 0.82rem; font-weight: bold; cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.6; }
-    .coach-btn:hover { border-color: #e94560; color: #fff; }
-    .coach-btn.active { border-color: #f0c040; color: #f0c040; }
-    .coach-btn.has-data { border-color: #1a6b3a; }
-    .coach-btn.has-data.active { border-color: #2ecc71; color: #2ecc71; background: #0a2018; }
 
     /* 声タイプ */
     .voice-type-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
@@ -260,14 +252,6 @@
         <input class="vol-slider" id="volSlider" type="range" min="1" max="300" value="200" oninput="onVolumeSlider(this.value)">
         <span class="vol-val" id="volVal">200%</span>
       </div>
-      <div class="coach-row">
-        <label style="font-size:0.75rem;color:#aaa;display:block;margin-bottom:2px">コーチ音声</label>
-        <div class="coach-btns">
-          <button class="coach-btn" id="coach-female" onclick="selectCoach('female')">👩 女性<br>コーチ</button>
-          <button class="coach-btn" id="coach-male" onclick="selectCoach('male')">💪 男性<br>コーチ</button>
-          <button class="coach-btn" id="coach-strict" onclick="selectCoach('strict')">🔥 厳しめ<br>コーチ</button>
-        </div>
-      </div>
     </div>
 
     <div class="controls">
@@ -279,7 +263,7 @@
     <!-- ゴングのみ（スタート/ストップ直下） -->
     <div style="margin:8px 0 10px">
       <button class="mode-btn" data-mode="gong-only" onclick="selectMode(this)" style="width:100%;padding:14px 4px;font-size:0.9rem">
-        🔔 ゴングのみ<br><span style="font-size:0.75rem;color:#f0c040">声なし・ラウンド開始時にゴングだけ</span>
+        🔔 ゴングのみ
       </button>
     </div>
 
@@ -698,16 +682,12 @@
 
   // 復元
   async function restoreAllFromStorage(){
-    initDefaultVoiceSettings();
+    initDefaultSettings();
     loadCustomLabels(); loadAllDelays(); loadRandSettings();
-    // コーチ音声を先にロード
-    selectedCoach=localStorage.getItem("kick_coach")||"none";
-    if(selectedCoach!=="none") await loadCoachAudio();
-    initCoachButtons();
     // ゴング音を復元
     const bellOk=await loadFromStorage("bell");
     if(bellOk) onRecordDone("bell",true);
-    // ユーザー録音（コーチ音声を上書き）
+    // ユーザー録音
     for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
   }
   let restored=false;
@@ -721,7 +701,7 @@
     if(activeRecId&&activeRecId!==id) stopRecording();
     if(activeRecId===id){stopRecording();return;}
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{noiseSuppression:true,echoCancellation:true,autoGainControl:true,channelCount:1}});
       const ctx=getCtx(); if(ctx.state==="suspended") await ctx.resume();
       recChunks=[]; mediaRecorder=new MediaRecorder(stream);
       mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recChunks.push(e.data);};
@@ -798,11 +778,8 @@
   function updateVoiceBadge(){
     const done=CALL_DEFS.filter(d=>recBlobUrls[d.id]).length;
     const b=document.getElementById("voiceBadge");
-    const coachNames={female:"女性コーチ",male:"男性コーチ",strict:"厳しめコーチ"};
     if(done===0){b.innerHTML="声: AIの声";return;}
-    const cname=coachNames[selectedCoach];
-    if(cname) b.innerHTML=`声: <span>${cname}（${done}コール）</span>`;
-    else b.innerHTML=`声: <span>自分の声（${done}コール録音済み）</span>`;
+    b.innerHTML=`声: <span>自分の声（${done}コール録音済み）</span>`;
   }
   function updateModeButtons(){
     document.querySelectorAll("#baseModes .mode-btn").forEach(btn=>{
@@ -987,83 +964,22 @@
     const vv=document.getElementById("volVal"); if(vv) vv.textContent=v+"%";
   }
 
-  // ============================================================
-  //  コーチ音声システム
-  // ============================================================
-  const COACH_PREFIXES={female:"kick_coach_f_",male:"kick_coach_m_",strict:"kick_coach_s_"};
-  const COACH_FILE_KEY={female:"f",male:"m",strict:"s"};
-  let selectedCoach="none";
-
-  // デフォルトのコール名・ランダム設定（初回起動時に自動セット）
-  const COACH_VOICE_LABELS={
-    custom1:'\u30b8\u30e3\u30d6\uff01',custom2:'\u30b9\u30c8\u30ec\u30fc\u30c8\uff01',custom3:'\u30d5\u30c3\u30af\uff01',custom4:'\u30a2\u30c3\u30d1\u30fc\uff01',
-    custom5:'\u30dc\u30c7\u30a3\uff01',custom6:'\u30ed\u30fc\uff01',custom7:'\u30df\u30c9\u30eb\uff01',custom8:'\u30cf\u30a4\uff01',
-    custom9:'\u524d\u8e74\u308a\uff01',custom10:'\u30d2\u30b6\uff01',custom11:'\u30d1\u30fc\u30ea\u30f3\u30b0\uff01',custom12:'\u30ef\u30f3\u30c4\u30fc\uff01',
-    custom13:'\u30ef\u30f3\u30c4\u30fc\u30b9\u30ea\u30fc\uff01',custom14:'\u9023\u6253\uff01',custom15:'\u30ef\u30f3\u30c4\u30fc\u30d5\u30c3\u30af\u30b9\u30c8\u30ec\u30fc\u30c8\uff01',
-    custom16:'\u30b9\u30a6\u30a7\u30fc\uff01',custom17:'\u30c0\u30c3\u30ad\u30f3\u30b0\uff01',custom18:'\u30a6\u30a3\u30fc\u30d3\u30f3\u30b0\uff01',
-    custom19:'\u30d6\u30ed\u30c3\u30af\uff01',custom20:'\u30ab\u30c3\u30c8\uff01',custom21:'\u30b9\u30a4\u30c3\u30c1\uff01'
+  // 初回起動時のデフォルト設定（ラベル・ランダム・ディレイ）
+  const DEFAULT_LABELS={
+    custom1:'\u30b8\u30e3\u30d6',custom2:'\u30b9\u30c8\u30ec\u30fc\u30c8',custom3:'\u30d5\u30c3\u30af',custom4:'\u30a2\u30c3\u30d1\u30fc',
+    custom5:'\u30dc\u30c7\u30a3',custom6:'\u30ed\u30fc',custom7:'\u30df\u30c9\u30eb',custom8:'\u30cf\u30a4',
+    custom9:'\u524d\u8e74\u308a',custom10:'\u30d2\u30b6',custom11:'\u30d1\u30fc\u30ea\u30f3\u30b0',custom12:'\u30ef\u30f3\u30c4\u30fc',
+    custom13:'\u30ef\u30f3\u30c4\u30fc\u30b9\u30ea\u30fc',custom14:'\u9023\u6253',custom15:'\u30ef\u30f3\u30c4\u30fc\u30d5\u30c3\u30af\u30b9\u30c8\u30ec\u30fc\u30c8',
+    custom16:'\u30b9\u30a6\u30a7\u30fc',custom17:'\u30c0\u30c3\u30ad\u30f3\u30b0',custom18:'\u30a6\u30a3\u30fc\u30d3\u30f3\u30b0',
+    custom19:'\u30d6\u30ed\u30c3\u30af',custom20:'\u30ab\u30c3\u30c8',custom21:'\u30b9\u30a4\u30c3\u30c1'
   };
-  function initDefaultVoiceSettings(){
-    for(const [id,text] of Object.entries(COACH_VOICE_LABELS)){
+  function initDefaultSettings(){
+    for(const [id,text] of Object.entries(DEFAULT_LABELS)){
       if(!localStorage.getItem(LL+id)) localStorage.setItem(LL+id,text);
     }
     for(let i=1;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem(LR+id)) localStorage.setItem(LR+id,'1');}
     for(let i=16;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem('kick_lowfreq_'+id)) localStorage.setItem('kick_lowfreq_'+id,'1');}
     if(!localStorage.getItem(LD+'custom14')) localStorage.setItem(LD+'custom14','5');
-    if(!localStorage.getItem('kick_coach')){localStorage.setItem('kick_coach','male');selectedCoach='male';}
-  }
-
-  function initCoachButtons(){
-    document.querySelectorAll(".coach-btn").forEach(b=>{
-      b.classList.remove("active");
-      b.classList.add("has-data"); // voices/ディレクトリのMP3が常に存在
-    });
-    const btn=document.getElementById("coach-"+selectedCoach);
-    if(btn) btn.classList.add("active");
-  }
-
-  async function selectCoach(type){
-    selectedCoach=type;
-    localStorage.setItem("kick_coach",type);
-    await loadCoachAudio();
-    initCoachButtons();
-    updateModeButtons();
-    updateVoiceBadge();
-  }
-
-  async function loadCoachAudio(){
-    const prefix=COACH_PREFIXES[selectedCoach];
-    const fileKey=COACH_FILE_KEY[selectedCoach];
-    for(const def of CUSTOM_DEFS){
-      if(!COACH_VOICE_LABELS[def.id]) continue; // custom1-21のみ対象
-      const userRec=localStorage.getItem(LP+def.id);
-      if(userRec) continue; // ユーザー録音優先
-      // 既存のblob URLを解放
-      if(recBlobUrls[def.id]&&recBlobUrls[def.id].startsWith('blob:')) URL.revokeObjectURL(recBlobUrls[def.id]);
-      delete recBlobUrls[def.id];
-      delete recBuffers[def.id];
-      // まずlocalStorageキャッシュを試みる
-      const b64=prefix?localStorage.getItem(prefix+def.id):null;
-      if(b64){
-        try{
-          const ab=b642buf(b64);
-          const blob=new Blob([ab],{type:"audio/mpeg"});
-          recBlobUrls[def.id]=URL.createObjectURL(blob);
-          try{recBuffers[def.id]=await getCtx().decodeAudioData(ab.slice(0));}catch(e){}
-          continue;
-        }catch(e){}
-      }
-      // fallback: voices-data.jsのbase64データからblob URLを生成
-      if(!fileKey) continue;
-      const b64data=window.COACH_AUDIO&&window.COACH_AUDIO[fileKey]&&window.COACH_AUDIO[fileKey][def.id];
-      if(!b64data) continue;
-      try{
-        const ab=b642buf(b64data);
-        const blob=new Blob([ab],{type:"audio/mpeg"});
-        recBlobUrls[def.id]=URL.createObjectURL(blob);
-        try{recBuffers[def.id]=await getCtx().decodeAudioData(ab.slice(0));}catch(e){}
-      }catch(e){}
-    }
   }
 
   // 声タイプ（EQフィルターで音色変換・速度変えず自然に）
@@ -1114,14 +1030,19 @@
     },
   };
 
-  // 滑舌補正フィルターを常時適用（子音を際立たせ聞き取りやすくする）
+  // 再生時フィルター：ノイズ低減＋滑舌補正
   function applyClearFilter(ctx, src, gain){
     const filters=[
-      {type:"highpass",  freq:120},
-      {type:"peaking",   freq:2500, gain:7, Q:1},
-      {type:"peaking",   freq:5000, gain:4, Q:1.5},
-      {type:"highshelf", freq:8000, gain:3},
+      {type:"highpass",  freq:100},          // 低域ノイズ（ハム・ゴロゴロ）カット
+      {type:"peaking",   freq:300, gain:-4, Q:1.5}, // こもり感を除去
+      {type:"peaking",   freq:2500, gain:6, Q:1},   // 子音の明瞭さ
+      {type:"peaking",   freq:5000, gain:3, Q:1.5}, // 歯擦音・シャープさ
+      {type:"highshelf", freq:9000, gain:-3},        // 高周波ノイズ（シャー）カット
     ];
+    // ダイナミクスコンプレッサー：背景ノイズを抑えて声を引き立てる
+    const comp=ctx.createDynamicsCompressor();
+    comp.threshold.value=-30; comp.knee.value=20;
+    comp.ratio.value=6; comp.attack.value=0.003; comp.release.value=0.15;
     let node=src;
     filters.forEach(f=>{
       const bq=ctx.createBiquadFilter();
@@ -1130,7 +1051,7 @@
       if(f.Q) bq.Q.value=f.Q;
       node.connect(bq); node=bq;
     });
-    node.connect(gain); gain.connect(ctx.destination);
+    node.connect(comp); comp.connect(gain); gain.connect(ctx.destination);
   }
 
   // ============================================================
@@ -1183,7 +1104,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",async ()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();selectedCoach=localStorage.getItem("kick_coach")||"none";initCoachButtons();await ensureRestored();});
+  window.addEventListener("DOMContentLoaded",async ()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();await ensureRestored();});
 
   // ============================================================
   //  トレーニング
@@ -1439,6 +1360,5 @@
   const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
   if(isIos&&!navigator.standalone&&!sessionStorage.getItem("installDismissed")) showBanner("ios");
   </script>
-<script src="./voices-data.js"></script>
 </body>
 </html>
