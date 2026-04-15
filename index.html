@@ -698,6 +698,7 @@
 
   // 復元
   async function restoreAllFromStorage(){
+    initDefaultVoiceSettings();
     loadCustomLabels(); loadAllDelays(); loadRandSettings();
     // コーチ音声を先にロード
     selectedCoach=localStorage.getItem("kick_coach")||"none";
@@ -990,15 +991,32 @@
   //  コーチ音声システム
   // ============================================================
   const COACH_PREFIXES={female:"kick_coach_f_",male:"kick_coach_m_",strict:"kick_coach_s_"};
+  const COACH_FILE_KEY={female:"f",male:"m",strict:"s"};
   let selectedCoach="none";
+
+  // デフォルトのコール名・ランダム設定（初回起動時に自動セット）
+  const COACH_VOICE_LABELS={
+    custom1:'\u30b8\u30e3\u30d6\uff01',custom2:'\u30b9\u30c8\u30ec\u30fc\u30c8\uff01',custom3:'\u30d5\u30c3\u30af\uff01',custom4:'\u30a2\u30c3\u30d1\u30fc\uff01',
+    custom5:'\u30dc\u30c7\u30a3\uff01',custom6:'\u30ed\u30fc\uff01',custom7:'\u30df\u30c9\u30eb\uff01',custom8:'\u30cf\u30a4\uff01',
+    custom9:'\u524d\u8e74\u308a\uff01',custom10:'\u30d2\u30b6\uff01',custom11:'\u30d1\u30fc\u30ea\u30f3\u30b0\uff01',custom12:'\u30ef\u30f3\u30c4\u30fc\uff01',
+    custom13:'\u30ef\u30f3\u30c4\u30fc\u30b9\u30ea\u30fc\uff01',custom14:'\u9023\u6253\uff01',custom15:'\u30ef\u30f3\u30c4\u30fc\u30d5\u30c3\u30af\u30b9\u30c8\u30ec\u30fc\u30c8\uff01',
+    custom16:'\u30b9\u30a6\u30a7\u30fc\uff01',custom17:'\u30c0\u30c3\u30ad\u30f3\u30b0\uff01',custom18:'\u30a6\u30a3\u30fc\u30d3\u30f3\u30b0\uff01',
+    custom19:'\u30d6\u30ed\u30c3\u30af\uff01',custom20:'\u30ab\u30c3\u30c8\uff01',custom21:'\u30b9\u30a4\u30c3\u30c1\uff01'
+  };
+  function initDefaultVoiceSettings(){
+    for(const [id,text] of Object.entries(COACH_VOICE_LABELS)){
+      if(!localStorage.getItem(LL+id)) localStorage.setItem(LL+id,text);
+    }
+    for(let i=1;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem(LR+id)) localStorage.setItem(LR+id,'1');}
+    for(let i=16;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem('kick_lowfreq_'+id)) localStorage.setItem('kick_lowfreq_'+id,'1');}
+    if(!localStorage.getItem(LD+'custom14')) localStorage.setItem(LD+'custom14','5');
+    if(!localStorage.getItem('kick_coach')){localStorage.setItem('kick_coach','male');selectedCoach='male';}
+  }
 
   function initCoachButtons(){
     document.querySelectorAll(".coach-btn").forEach(b=>{
       b.classList.remove("active");
-      const type=b.id.replace("coach-","");
-      const prefix=COACH_PREFIXES[type];
-      const hasData=prefix&&localStorage.getItem(prefix+"custom1")!==null;
-      b.classList.toggle("has-data",hasData);
+      b.classList.add("has-data"); // voices/ディレクトリのMP3が常に存在
     });
     const btn=document.getElementById("coach-"+selectedCoach);
     if(btn) btn.classList.add("active");
@@ -1015,18 +1033,33 @@
 
   async function loadCoachAudio(){
     const prefix=COACH_PREFIXES[selectedCoach];
+    const fileKey=COACH_FILE_KEY[selectedCoach];
     for(const def of CUSTOM_DEFS){
+      if(!COACH_VOICE_LABELS[def.id]) continue; // custom1-21のみ対象
       const userRec=localStorage.getItem(LP+def.id);
       if(userRec) continue; // ユーザー録音優先
-      const b64=prefix?localStorage.getItem(prefix+def.id):null;
       if(recBlobUrls[def.id]){URL.revokeObjectURL(recBlobUrls[def.id]);delete recBlobUrls[def.id];}
       delete recBuffers[def.id];
-      if(!b64) continue;
+      // まずlocalStorageキャッシュを試みる
+      const b64=prefix?localStorage.getItem(prefix+def.id):null;
+      if(b64){
+        try{
+          const ab=b642buf(b64);
+          const blob=new Blob([ab],{type:"audio/mpeg"});
+          recBlobUrls[def.id]=URL.createObjectURL(blob);
+          try{recBuffers[def.id]=await getCtx().decodeAudioData(ab.slice(0));}catch(e){}
+          continue;
+        }catch(e){}
+      }
+      // fallback: voices/ディレクトリのMP3ファイルからfetch
+      if(!fileKey) continue;
       try{
-        const ab=b642buf(b64);
-        const blob=new Blob([ab],{type:"audio/mpeg"});
+        const resp=await fetch(`./voices/coach_${fileKey}_${def.id}.mp3`);
+        if(!resp.ok) continue;
+        const ab=await resp.arrayBuffer();
+        const blob=new Blob([ab.slice(0)],{type:"audio/mpeg"});
         recBlobUrls[def.id]=URL.createObjectURL(blob);
-        try{recBuffers[def.id]=await getCtx().decodeAudioData(ab.slice(0));}catch(e){}
+        try{recBuffers[def.id]=await getCtx().decodeAudioData(ab);}catch(e){}
       }catch(e){}
     }
   }

@@ -1,4 +1,4 @@
-const CACHE = 'kickboxing-v13';
+const CACHE = 'kickboxing-v14';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg', './gong.mp3', './gong-end.mp3'];
 
 self.addEventListener('install', ev => {
@@ -16,6 +16,20 @@ self.addEventListener('activate', ev => {
 });
 
 self.addEventListener('fetch', ev => {
+  // voices/のMP3はキャッシュファースト（初回fetchで自動キャッシュ）
+  if (ev.request.url.includes('/voices/')) {
+    ev.respondWith(
+      caches.match(ev.request).then(cached => {
+        if (cached) return cached;
+        return fetch(ev.request).then(resp => {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(ev.request, clone));
+          return resp;
+        }).catch(() => cached);
+      })
+    );
+    return;
+  }
   ev.respondWith(
     caches.match(ev.request).then(r => r || fetch(ev.request).catch(() => caches.match('./index.html')))
   );
