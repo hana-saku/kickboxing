@@ -737,12 +737,7 @@
     a.mozPreservesPitch=true; a.webkitPreservesPitch=true;
     a.play();
   }
-  function updateVoiceBadge(){
-    const done=CALL_DEFS.filter(d=>recBlobUrls[d.id]).length;
-    const b=document.getElementById("voiceBadge");
-    if(done===0){b.innerHTML="声: AIの声";return;}
-    b.innerHTML=`声: <span>自分の声（${done}コール録音済み）</span>`;
-  }
+  function updateVoiceBadge(){}
   function updateModeButtons(){
     [...CUSTOM_DEFS,...SINGLE_DEFS].forEach(def=>{
       const btn=document.getElementById(`modeBtn-${def.id}`);
