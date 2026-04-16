@@ -258,6 +258,12 @@
       <button class="ctrl-btn" id="startBtn" onclick="startTraining()">▶ スタート</button>
       <button class="ctrl-btn" id="stopBtn"  onclick="stopTraining()">■ ストップ</button>
     </div>
+    <div style="text-align:center;margin:5px 0 6px">
+      <label style="display:inline-flex;align-items:center;gap:7px;font-size:0.82rem;color:#aaa;cursor:pointer;user-select:none">
+        <input type="checkbox" id="countdownToggle" checked onchange="onCountdownToggle()" style="accent-color:#e94560;width:15px;height:15px;cursor:pointer">
+        スタート前10秒カウントダウン
+      </label>
+    </div>
     <div class="status" id="status">モードを選んでスタートを押してください</div>
 
     <!-- ゴングのみ（スタート/ストップ直下） -->
@@ -1057,7 +1063,7 @@
   }
   function updateTimerDisplay(){document.getElementById("timerDisplay").textContent=formatTime(getWorkSec());}
 
-  window.addEventListener("DOMContentLoaded",async ()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();await ensureRestored();});
+  window.addEventListener("DOMContentLoaded",async ()=>{loadSettings();loadRandSettings();loadGongIntervalInputs();loadVolume();loadCountdownSetting();await ensureRestored();});
 
   // ============================================================
   //  トレーニング
@@ -1226,6 +1232,16 @@
     }
   }
 
+  function onCountdownToggle(){
+    const cb=document.getElementById("countdownToggle");
+    localStorage.setItem("kick_countdown",cb.checked?"1":"0");
+  }
+  function loadCountdownSetting(){
+    const v=localStorage.getItem("kick_countdown");
+    const cb=document.getElementById("countdownToggle");
+    if(cb&&v!==null) cb.checked=(v==="1");
+  }
+
   async function startTraining(){
     if(running) return;
     await ensureRestored(); // 録音データを確実に読み込んでからスタート
@@ -1234,24 +1250,27 @@
     document.getElementById("startBtn").disabled=true;
     document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="none");
 
-    // 10秒カウントダウン
-    document.getElementById("status").textContent="まもなく開始...";
-    for(let i=10; i>=1; i--){
+    // カウントダウン（ONの場合のみ）
+    const useCountdown=document.getElementById("countdownToggle").checked;
+    if(useCountdown){
+      document.getElementById("status").textContent="まもなく開始...";
+      for(let i=10; i>=1; i--){
+        if(!running) return;
+        document.getElementById("timerDisplay").textContent=String(i);
+        document.getElementById("currentCall").textContent="▶ "+i;
+        await new Promise(res=>{
+          synth.cancel();
+          const u=new SpeechSynthesisUtterance(String(i));
+          u.lang="en-US"; u.rate=0.9; u.pitch=1.0; u.volume=1.0;
+          const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
+          if(enV) u.voice=enV;
+          u.onend=u.onerror=()=>setTimeout(res,80);
+          synth.speak(u);
+        });
+      }
       if(!running) return;
-      document.getElementById("timerDisplay").textContent=String(i);
-      document.getElementById("currentCall").textContent="▶ "+i;
-      await new Promise(res=>{
-        synth.cancel();
-        const u=new SpeechSynthesisUtterance(String(i));
-        u.lang="en-US"; u.rate=0.9; u.pitch=1.0; u.volume=1.0;
-        const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
-        if(enV) u.voice=enV;
-        u.onend=u.onerror=()=>setTimeout(res,80);
-        synth.speak(u);
-      });
+      document.getElementById("currentCall").textContent="";
     }
-    if(!running) return;
-    document.getElementById("currentCall").textContent="";
     await startRound();
   }
 
