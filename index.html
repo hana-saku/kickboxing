@@ -923,9 +923,13 @@
     custom19:'\u30d6\u30ed\u30c3\u30af',custom20:'\u30ab\u30c3\u30c8',custom21:'\u30b9\u30a4\u30c3\u30c1'
   };
   function initDefaultSettings(){
+    // バージョンが変わったら DEFAULT_LABELS を強制上書き（ラベル移行）
+    const LABEL_VER = "3";
+    const needsMigration = localStorage.getItem("kick_label_version") !== LABEL_VER;
     for(const [id,text] of Object.entries(DEFAULT_LABELS)){
-      if(!localStorage.getItem(LL+id)) localStorage.setItem(LL+id,text);
+      if(needsMigration || !localStorage.getItem(LL+id)) localStorage.setItem(LL+id,text);
     }
+    if(needsMigration) localStorage.setItem("kick_label_version", LABEL_VER);
     for(let i=1;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem(LR+id)) localStorage.setItem(LR+id,'1');}
     for(let i=16;i<=21;i++){const id=`custom${i}`;if(!localStorage.getItem('kick_lowfreq_'+id)) localStorage.setItem('kick_lowfreq_'+id,'1');}
     if(!localStorage.getItem(LD+'custom14')) localStorage.setItem(LD+'custom14','5');
