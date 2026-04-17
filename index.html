@@ -340,6 +340,7 @@
     </div>
   </div>
 
+  <script src="./default-voices.js"></script>
   <script>
   // ============================================================
   //  コール定義
@@ -434,8 +435,22 @@
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e){}
   }
 
-  const recBuffers={}, recBlobUrls={};
+  const recBuffers={}, recBlobUrls={}, defaultBlobUrls={};
   let activeRecId=null, mediaRecorder=null, recChunks=[];
+
+  // デフォルト音声（ElevenLabs）をblobURLに変換（ユーザー録音がある場合は使わない）
+  function loadDefaultVoices(){
+    if(!window.DEFAULT_VOICES) return;
+    for(const [id, b64] of Object.entries(window.DEFAULT_VOICES)){
+      if(recBlobUrls[id]) continue; // ユーザー録音優先
+      try{
+        const bin=atob(b64); const u8=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+        const blob=new Blob([u8],{type:"audio/mpeg"});
+        defaultBlobUrls[id]=URL.createObjectURL(blob);
+      }catch(e){}
+    }
+  }
 
   // ============================================================
   //  タブ切替
@@ -646,11 +661,10 @@
   async function restoreAllFromStorage(){
     initDefaultSettings();
     loadCustomLabels(); loadAllDelays(); loadRandSettings();
-    // ゴング音を復元
     const bellOk=await loadFromStorage("bell");
     if(bellOk) onRecordDone("bell",true);
-    // ユーザー録音
     for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
+    loadDefaultVoices(); // ユーザー録音ロード後にデフォルト音声を補完
   }
   let restored=false;
   async function ensureRestored(){if(restored)return;restored=true;await restoreAllFromStorage();}
@@ -785,16 +799,14 @@
 
   function playCallId(id){
     return new Promise(resolve=>{
-      if(recBlobUrls[id]){
-        // new Audio() で再生 → preservesPitch=true でピッチ固定
-        const a = new Audio(recBlobUrls[id]);
+      const blobUrl = recBlobUrls[id] || defaultBlobUrls[id];
+      if(blobUrl){
+        const a = new Audio(blobUrl);
         a.playbackRate = speechRate;
-        // ブラウザ内蔵ピッチ補正（速度変えても音程変わらない）
         a.preservesPitch = true;
         a.mozPreservesPitch = true;
         a.webkitPreservesPitch = true;
         currentCallAudio = a;
-        // Web Audio API で音量＋滑舌補正フィルターをかける
         try {
           const ctx = getCtx(); if(ctx.state==="suspended") ctx.resume();
           const src = ctx.createMediaElementSource(a);
@@ -802,7 +814,6 @@
           gain.gain.value = callVolume;
           applyClearFilter(ctx, src, gain);
         } catch(e) {
-          // MediaElementSource は1要素1回限り。2回目以降はそのまま再生
           a.volume = Math.min(1.0, callVolume);
         }
         a.onended = ()=>{ currentCallAudio=null; resolve(); };
