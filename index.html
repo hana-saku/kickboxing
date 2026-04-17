@@ -1116,7 +1116,6 @@
   }
 
   function selectMode(btn){
-    if(running) return;
     document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active"); selectedMode=btn.dataset.mode; shuffleQueue=[];
   }
@@ -1253,7 +1252,6 @@
     if(audioCtx&&audioCtx.state==="suspended") await audioCtx.resume();
     running=true; currentRound=1; shuffleQueue=[];
     document.getElementById("startBtn").disabled=true;
-    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="none");
 
     // カウントダウン（ONの場合のみ）
     const useCountdown=document.getElementById("countdownToggle").checked;
@@ -1282,7 +1280,6 @@
   function finishTraining(){
     running=false;
     document.getElementById("startBtn").disabled=false;
-    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="auto");
     updateTimerDisplay();
   }
 
@@ -1291,7 +1288,6 @@
     running=false; isResting=false;
     clearInterval(timerInterval); clearTimeout(callTimeout); stopCurrentCall();
     document.getElementById("startBtn").disabled=false;
-    document.querySelectorAll(".mode-btn").forEach(b=>b.style.pointerEvents="auto");
     document.getElementById("roundLabel").textContent="";
     document.getElementById("currentCall").textContent="－";
     document.getElementById("status").textContent="";
