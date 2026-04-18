@@ -435,6 +435,55 @@
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e){}
   }
 
+  // ============================================================
+  //  バックグラウンド再生対応
+  // ============================================================
+  let silentSource = null;
+
+  // AudioContextで無音ループ → iOSのオーディオセッションを維持
+  function startSilentLoop(){
+    const ctx = getCtx();
+    if(silentSource) return;
+    const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); // 1秒無音
+    function loop(){
+      if(!running){ silentSource=null; return; }
+      silentSource = ctx.createBufferSource();
+      silentSource.buffer = buf;
+      silentSource.connect(ctx.destination);
+      silentSource.onended = loop;
+      silentSource.start();
+    }
+    loop();
+  }
+  function stopSilentLoop(){
+    if(silentSource){ try{ silentSource.onended=null; silentSource.stop(); }catch(e){} silentSource=null; }
+  }
+
+  // MediaSession API：OSにメディアアプリとして認識させる
+  function registerMediaSession(){
+    if(!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'キックボクシング 声だし',
+      artist: 'トレーニング中',
+    });
+    navigator.mediaSession.setActionHandler('stop', ()=>stopTraining());
+    navigator.mediaSession.setActionHandler('pause', ()=>{});
+    navigator.mediaSession.setActionHandler('play', ()=>{});
+    navigator.mediaSession.playbackState = 'playing';
+  }
+  function unregisterMediaSession(){
+    if(!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.metadata = null;
+  }
+
+  // バックグラウンドから復帰したときにAudioContextを再開
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && audioCtx && audioCtx.state==='suspended'){
+      audioCtx.resume();
+    }
+  });
+
   const recBuffers={}, recBlobUrls={}, defaultBlobUrls={};
   let activeRecId=null, mediaRecorder=null, recChunks=[];
 
@@ -1252,6 +1301,8 @@
     if(audioCtx&&audioCtx.state==="suspended") await audioCtx.resume();
     running=true; currentRound=1; shuffleQueue=[];
     document.getElementById("startBtn").disabled=true;
+    startSilentLoop();
+    registerMediaSession();
 
     // カウントダウン（ONの場合のみ）
     const useCountdown=document.getElementById("countdownToggle").checked;
@@ -1279,6 +1330,7 @@
 
   function finishTraining(){
     running=false;
+    stopSilentLoop(); unregisterMediaSession();
     document.getElementById("startBtn").disabled=false;
     updateTimerDisplay();
   }
@@ -1287,6 +1339,7 @@
     if(!running) return;
     running=false; isResting=false;
     clearInterval(timerInterval); clearTimeout(callTimeout); stopCurrentCall();
+    stopSilentLoop(); unregisterMediaSession();
     document.getElementById("startBtn").disabled=false;
     document.getElementById("roundLabel").textContent="";
     document.getElementById("currentCall").textContent="－";

@@ -1,4 +1,4 @@
-const CACHE = 'kickboxing-v26';
+const CACHE = 'kickboxing-v27';
 const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg', './gong.mp3', './gong-end.mp3', './default-voices.js'];
 
 self.addEventListener('install', ev => {
