@@ -685,11 +685,16 @@
     const labelHtml=def.isCustom
       ?`<input class="rec-label-input" id="labelInput-${def.id}" placeholder="名前を入力（例：右ハイキック！）" oninput="onLabelInput('${def.id}',this.value)">`
       :`<span class="rec-label">${def.label}</span>`;
+    const hasDefault=window.DEFAULT_VOICES&&window.DEFAULT_VOICES[def.id];
+    const resetBtn=hasDefault
+      ?`<button class="rec-btn" id="resetBtn-${def.id}" style="background:#1a3a5c;color:#7ec8e3;font-size:0.75rem;display:none" onclick="resetToDefault('${def.id}')">↩ デフォルト</button>`
+      :``;
     row.innerHTML=`
       <div class="rec-top">${labelHtml}<span class="rec-status">✅ 録音済み</span></div>
       <div class="rec-btns">
         <button class="rec-btn record" id="recBtn-${def.id}" onclick="toggleRecord('${def.id}')">🎙 録音開始</button>
         <button class="rec-btn play"   id="playBtn-${def.id}" onclick="playRec('${def.id}')" disabled>▶ 確認</button>
+        ${resetBtn}
       </div>
       <div class="delay-row">
         <span>次まで間隔：</span>
@@ -700,6 +705,25 @@
       </div>
       <div class="waveform" id="wave-${def.id}"><canvas class="wave-canvas" id="canvas-${def.id}" height="32"></canvas></div>`;
     container.appendChild(row);
+  }
+
+  // ユーザー録音を削除してデフォルト音声に戻す
+  function resetToDefault(id){
+    if(!confirm('自分の録音を削除してデフォルト音声に戻しますか？')) return;
+    localStorage.removeItem(LP+id);
+    if(recBlobUrls[id]){ URL.revokeObjectURL(recBlobUrls[id]); delete recBlobUrls[id]; }
+    delete recBuffers[id];
+    const row=document.getElementById(`row-${id}`);
+    if(row) row.classList.remove("done");
+    const rb=document.getElementById(`recBtn-${id}`);
+    if(rb) rb.textContent="🎙 録音開始";
+    const pb=document.getElementById(`playBtn-${id}`);
+    if(pb) pb.disabled=true;
+    const rst=document.getElementById(`resetBtn-${id}`);
+    if(rst) rst.style.display="none";
+    const wrap=document.getElementById(`wave-${id}`);
+    if(wrap) wrap.style.display="none";
+    updateModeButtons();
   }
   function buildRecUI(){
     BASE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListBase")));
@@ -806,6 +830,8 @@
       drawWaveform("bell"); return;
     }
     const row=document.getElementById(`row-${id}`); if(row) row.classList.add("done");
+    const rst=document.getElementById(`resetBtn-${id}`);
+    if(rst) rst.style.display="inline-flex";
     drawWaveform(id); updateVoiceBadge(); updateModeButtons();
   }
 
