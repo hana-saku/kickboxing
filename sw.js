@@ -1,5 +1,5 @@
-const CACHE = 'kickboxing-v27';
-const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg', './gong.mp3', './gong-end.mp3', './default-voices.js'];
+const CACHE = 'kickboxing-v28';
+const ASSETS = ['./index.html', './manifest.json', './icon.svg', './icon-maskable.svg', './gong.mp3', './gong-end.mp3', './default-voices.js', './ann.js'];
 
 self.addEventListener('install', ev => {
   ev.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

@@ -158,6 +158,17 @@
     .gong-custom-input { width: 60px; background: #0d1b2a; border: 2px solid #0f3460; border-radius: 8px; color: #f0c040; font-size: 1.1rem; font-weight: bold; text-align: center; padding: 5px 2px; outline: none; }
     .gong-custom-input:focus { border-color: #f0c040; }
 
+    /* ヒントバナー */
+    #hintBanner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+      background: #0f3460; border-top: 2px solid #f0c040;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    }
+    #hintBanner.hidden { display: none; }
+    #hintBanner .hint-text { flex: 1; font-size: 0.82rem; color: #f0c040; line-height: 1.5; }
+    #hintBanner .hint-text strong { color: #fff; display: block; margin-bottom: 2px; }
+    #hintBanner button { background: #f0c040; color: #1a1a2e; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
     /* インストールバナー */
     #installBanner {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -180,6 +191,15 @@
   </style>
 </head>
 <body>
+
+  <!-- ヒントバナー（初回のみ） -->
+  <div id="hintBanner" class="hidden">
+    <div class="hint-text">
+      <strong>💡 コール名の変え方</strong>
+      「🎙 録音」タブを開くと、各コールの名前を自由に編集できます
+    </div>
+    <button onclick="dismissHint()">OK</button>
+  </div>
 
   <div id="installBanner" class="hidden">
     <div class="install-text">
@@ -341,6 +361,7 @@
   </div>
 
   <script src="./default-voices.js"></script>
+  <script src="./ann.js"></script>
   <script>
   // ============================================================
   //  コール定義
@@ -374,6 +395,31 @@
     maegeri:["maegeri"], upper:["upper"],
     random:["wantwo","combo","migi","hidari","maegeri","upper"],
   };
+
+  // ============================================================
+  //  アナウンス音声（事前生成・モバイル対応）
+  // ============================================================
+  const ANN = {};
+  function loadAnnouncements(){
+    if(!window.ANNOUNCEMENTS) return;
+    for(const [id,b64] of Object.entries(window.ANNOUNCEMENTS)){
+      try{
+        const bin=atob(b64); const u8=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+        ANN[id]=URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}));
+      }catch(e){}
+    }
+  }
+  loadAnnouncements();
+
+  function playAnn(id){
+    return new Promise(resolve=>{
+      const url=ANN[id]; if(!url){resolve();return;}
+      const a=new Audio(url);
+      a.onended=resolve; a.onerror=resolve;
+      a.play().catch(resolve);
+    });
+  }
 
   // ============================================================
   //  Audio
@@ -908,10 +954,11 @@
     });
   }
   function playRoundAnnouncement(roundNum) {
-    return playEnglish(`Round ${roundNumToWords(roundNum)}`);
+    const id='r'+roundNum;
+    return ANN[id] ? playAnn(id) : playEnglish(`Round ${roundNumToWords(roundNum)}`);
   }
   function playRestAnnouncement() {
-    return playEnglish("Interval");
+    return ANN['interval'] ? playAnn('interval') : playEnglish("Interval");
   }
 
   // インターバル中のアナウンス
@@ -1223,7 +1270,7 @@
       const isFinalG = currentRound === getRounds();
       document.getElementById("currentCall").textContent="🔔";
       document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
-      if(isFinalG){ await playEnglish("Final Round"); } else { await playRoundAnnouncement(currentRound); }
+      if(isFinalG){ await (ANN['final']?playAnn('final'):playEnglish("Final Round")); } else { await playRoundAnnouncement(currentRound); }
       if(!running) return;
       await playBell(); vibrate([300]);
       // タイマーのみ・ゴングは繰り返さない
@@ -1232,7 +1279,7 @@
       document.getElementById("currentCall").textContent= isFinal ? "FINAL ROUND!" : "スタート！";
       document.getElementById("status").textContent=`ラウンド ${currentRound} トレーニング中...`;
       if(isFinal){
-        await playEnglish("Final Round");
+        await (ANN['final']?playAnn('final'):playEnglish("Final Round"));
       } else {
         await playRoundAnnouncement(currentRound);
       }
@@ -1312,15 +1359,20 @@
         if(!running) return;
         document.getElementById("timerDisplay").textContent=String(i);
         document.getElementById("currentCall").textContent="▶ "+i;
-        await new Promise(res=>{
-          synth.cancel();
-          const u=new SpeechSynthesisUtterance(String(i));
-          u.lang="en-US"; u.rate=0.9; u.pitch=1.0; u.volume=1.0;
-          const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
-          if(enV) u.voice=enV;
-          u.onend=u.onerror=()=>setTimeout(res,80);
-          synth.speak(u);
-        });
+        const annId='c'+i;
+        if(ANN[annId]){
+          await playAnn(annId);
+        } else {
+          await new Promise(res=>{
+            synth.cancel();
+            const u=new SpeechSynthesisUtterance(String(i));
+            u.lang="en-US"; u.rate=0.9; u.pitch=1.0; u.volume=1.0;
+            const enV=voices.find(v=>v.lang==="en-US")||voices.find(v=>v.lang.startsWith("en"));
+            if(enV) u.voice=enV;
+            u.onend=u.onerror=()=>setTimeout(res,400);
+            synth.speak(u);
+          });
+        }
       }
       if(!running) return;
       document.getElementById("currentCall").textContent="";
@@ -1369,6 +1421,10 @@
       navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload());
     });
   }
+  // ヒントバナー（初回のみ表示）
+  function dismissHint(){ document.getElementById("hintBanner").classList.add("hidden"); localStorage.setItem("kick_hint_done","1"); }
+  if(!localStorage.getItem("kick_hint_done")){ setTimeout(()=>document.getElementById("hintBanner").classList.remove("hidden"),1500); }
+
   let deferredPrompt=null;
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;showBanner("android");});
   function showBanner(type){
