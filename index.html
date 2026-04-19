@@ -780,6 +780,7 @@
     if(bellOk) onRecordDone("bell",true);
     for(const def of CALL_DEFS){const ok=await loadFromStorage(def.id); if(ok) onRecordDone(def.id,true);}
     loadDefaultVoices(); // ユーザー録音ロード後にデフォルト音声を補完
+    updateModeButtons(); // ラベルを必ず最新化
   }
   let restored=false;
   async function ensureRestored(){if(restored)return;restored=true;await restoreAllFromStorage();}
