@@ -329,11 +329,9 @@
       <div class="waveform" id="wave-bell"><canvas class="wave-canvas" id="canvas-bell" height="32"></canvas></div>
     </div>
 
-    <div class="rec-section-title" style="margin-top:16px">▼ 基本コール</div>
-    <div class="rec-list" id="recListBase"></div>
-    <div class="rec-section-title" style="margin-top:16px">▼ カスタムコール（繰り返しモード用）</div>
+    <div class="rec-section-title" style="margin-top:16px">▼ 繰り返しモード</div>
     <div class="rec-list" id="recListCustom"></div>
-    <div class="rec-section-title" style="margin-top:16px">▼ 単発カスタムコール（単発モード用・各1回再生）</div>
+    <div class="rec-section-title" style="margin-top:16px">▼ 単発モード</div>
     <div class="rec-list" id="recListSingle"></div>
   </div>
 
@@ -725,7 +723,6 @@
     updateModeButtons();
   }
   function buildRecUI(){
-    BASE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListBase")));
     CUSTOM_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListCustom")));
     SINGLE_DEFS.forEach(def=>buildRecRow(def,document.getElementById("recListSingle")));
   }
